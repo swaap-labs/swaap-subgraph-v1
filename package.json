@@ -1,0 +1,12 @@
+{
+  "name": "daatatest",
+  "license": "UNLICENSED",
+  "scripts": {
+    "codegen": "npx graph codegen",
+    "build": "graph build"
+  },
+  "dependencies": {
+    "@graphprotocol/graph-cli": "0.25.3",
+    "@graphprotocol/graph-ts": "0.24.1"
+  }
+}

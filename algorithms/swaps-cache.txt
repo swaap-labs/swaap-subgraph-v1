@@ -1,0 +1,43 @@
+const cache = 5min
+const roundFees ={ total:0, today:[], yesterday:[], last:now-cache}
+
+
+newValue = {
+	time,
+	spread,
+	fee
+}
+
+const limit = now - 24h
+addValue(newValue)
+
+if (now - cache > roundFees.last){
+   return tri(limit)
+}else{
+   return roundFees.total
+}
+
+
+
+
+addValue = (val)=>{
+	first = roundFees.today[0]
+
+	if (first.time < limit){
+
+		roundFees.yesterday=roundFees.today
+		roundFees.today=[]
+		roundFees.total=undefined  // will be updated
+	}
+
+	roundFees.today.push(val)
+}
+
+
+tri = (limit) => {
+	sumYesterday = sum(roundFees.yesterday filter ater limit map fee)
+	sumToday = sum(roundFees.today)
+	const total =sumYesterday+sumToday
+	roundFees[position].total = total
+	return total
+}

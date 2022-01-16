@@ -1,0 +1,119 @@
+specVersion: 0.0.2
+description: Swaap Protocol - the market neutral AMM.
+repository: https://github.com/borelien/paaws
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum/contract
+    name: Factory
+    network: matic
+    source:
+      address: "0xd682a62bd1dF757616e68319720295Ff7667A847"
+      abi: Factory
+      startBlock: 29520285
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.5
+      language: wasm/assemblyscript
+      file: ./src/mappings/factory.ts
+      entities:
+        - SwaapProtocol
+      abis:
+        - name: Factory
+          file: ./abis/Factory.json
+        - name: CRPFactory
+          file: ./abis/CRPFactory.json
+        - name: ConfigurableRightsPool
+          file: ./abis/ConfigurableRightsPool.json
+      eventHandlers:
+        - event: LOG_NEW_POOL(indexed address,indexed address)
+          handler: handleNewPool
+templates:
+  - kind: ethereum/contract
+    name: Pool
+    network: matic
+    source:
+      abi: Pool
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.5
+      language: wasm/assemblyscript
+      file: ./src/mappings/pool.ts
+      entities:
+        - Pool
+        - SwaapProtocol
+        - Swap
+      abis:
+        - name: Pool
+          file: ./abis/Pool.json
+        - name: Token
+          file: ./abis/PoolToken.json
+        - name: TokenBytes
+          file: ./abis/TokenBytes32.json
+      eventHandlers:
+        - event: LOG_CALL(indexed bytes4,indexed address,bytes)
+          topic0: "0x34e1990700000000000000000000000000000000000000000000000000000000"
+          handler: handleSetSwapFee
+        - event: LOG_CALL(indexed bytes4,indexed address,bytes)
+          topic0: "0x49b5955200000000000000000000000000000000000000000000000000000000"
+          handler: handleSetPublicSwap
+        - event: LOG_CALL(indexed bytes4,indexed address,bytes)
+          topic0: "0x4bb278f300000000000000000000000000000000000000000000000000000000"
+          handler: handleFinalize
+        - event: LOG_CALL(indexed bytes4,indexed address,bytes)
+          topic0: "0x86d4606200000000000000000000000000000000000000000000000000000000"
+          handler: handleRebind #bindMMM(address,uint256,uint80,address)
+        - event: LOG_CALL(indexed bytes4,indexed address,bytes)
+          topic0: "0xab323b4900000000000000000000000000000000000000000000000000000000"
+          handler: handleRebind #rebindMMM(address,uint256,uint80,address)
+        - event: LOG_CALL(indexed bytes4,indexed address,bytes)
+          topic0: "0xc343517100000000000000000000000000000000000000000000000000000000"
+          handler: handleUnbind
+        - event: LOG_JOIN(indexed address,indexed address,uint256)
+          handler: handleJoinPool
+        - event: LOG_EXIT(indexed address,indexed address,uint256)
+          handler: handleExitPool
+        - event: LOG_SWAP(indexed address,indexed address,indexed address,uint256,uint256,uint256,uint256,uint256,uint256)
+          handler: handleSwap
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
+        - event: LOG_NEW_CONTROLLER(indexed address,indexed address)
+          handler: handleSetController
+        - event: LOG_NEW_ORACLE_STATE(indexed address,address,uint256,uint8,string)
+          handler: handleNewOracleState
+        - event: LOG_CALL(indexed bytes4,indexed address,bytes)
+          topic0: "0x3cc3396000000000000000000000000000000000000000000000000000000000"
+          handler: handleSetPriceStatisticsLookbackInRound
+        - event: LOG_CALL(indexed bytes4,indexed address,bytes)
+          topic0: "0x045dbae000000000000000000000000000000000000000000000000000000000"
+          handler: handleSetPriceStatisticsLookbackStepInRound
+        - event: LOG_CALL(indexed bytes4,indexed address,bytes)
+          topic0: "0x3c515d9900000000000000000000000000000000000000000000000000000000"
+          handler: handleSetDynamicCoverageFeesZ
+        - event: LOG_CALL(indexed bytes4,indexed address,bytes)
+          topic0: "0x314d204f00000000000000000000000000000000000000000000000000000000"
+          handler: handleSetDynamicCoverageFeesHorizon
+        - event: LOG_CALL(indexed bytes4,indexed address,bytes)
+          topic0: "0x538e285c00000000000000000000000000000000000000000000000000000000"
+          handler: handleSetPriceStatisticsLookbackInSec
+        - event: LOG_CALL(indexed bytes4,indexed address,bytes)
+          topic0: "0xacb21b3100000000000000000000000000000000000000000000000000000000"
+          handler: handleSetMaxPriceUnpegRatio
+  - kind: ethereum/contract
+    name: CrpController
+    network: matic
+    source:
+      abi: ConfigurableRightsPool
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.5
+      language: wasm/assemblyscript
+      file: ./src/mappings/pool.ts
+      entities:
+        - Pool
+      abis:
+        - name: ConfigurableRightsPool
+          file: ./abis/ConfigurableRightsPool.json
+      eventHandlers:
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleSetCrpController
