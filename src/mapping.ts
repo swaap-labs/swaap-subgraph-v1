@@ -1,4 +1,6 @@
 import { BigInt } from "@graphprotocol/graph-ts"
+import {log} from "@graphprotocol/graph-ts/"
+
 import {
   Factory,
   LOG_NEW_POOL,
@@ -9,6 +11,7 @@ import { ExampleEntity } from "../generated/schema"
 export function handleLOG_NEW_POOL(event: LOG_NEW_POOL): void {
   // Entities can be loaded from the store using a string ID; this ID
   // needs to be unique across all entities of the same type
+  log.info("SWAAP : Found new pool", [])
   let entity = ExampleEntity.load(event.transaction.from.toHex())
 
   // Entities only exist after they have been saved to the store;
@@ -21,14 +24,19 @@ export function handleLOG_NEW_POOL(event: LOG_NEW_POOL): void {
   }
 
   // BigInt and BigDecimal math are supported
-  entity.count = entity.count + BigInt.fromI32(1)
+  entity.count = entity.count.plus(BigInt.fromI32(1))
 
   // Entity fields can be set based on event parameters
   entity.caller = event.params.caller
   entity.pool = event.params.pool
 
   // Entities can be written to the store with `.save()`
+  log.info("SWAAP : Saving new pool", [])
+
   entity.save()
+
+  log.info("SWAAP : Saved new pool", [])
+
 
   // Note: If a handler doesn't require existing field values, it is faster
   // _not_ to load the entity from the store. Instead, create it fresh with
