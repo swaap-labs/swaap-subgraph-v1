@@ -1,15 +1,15 @@
 /// <reference path="../../node_modules/assemblyscript/index.d.ts" />
 import { BigInt, Address, Bytes, store } from '@graphprotocol/graph-ts'
-import { LOG_CALL, LOG_JOIN, LOG_EXIT, LOG_SWAP, Transfer, GulpCall } from '../types/templates/Pool/Pool'
-import { Pool as BPool } from '../types/templates/Pool/Pool'
 import {
-  Balancer,
-  Pool,
-  PoolToken,
-  PoolShare,
-  Swap,
-  TokenPrice
-} from '../types/schema'
+  GulpCall,
+  LOG_CALL,
+  LOG_EXIT,
+  LOG_JOIN,
+  LOG_SWAP,
+  Pool as BPool,
+  Transfer
+} from '../../generated/templates/Pool/Pool'
+
 import {
   hexToDecimal,
   bigIntToDecimal,
@@ -22,7 +22,8 @@ import {
   ZERO_BD,
   decrPoolCount
 } from './helpers'
-import { ConfigurableRightsPool, OwnershipTransferred } from '../types/Factory/ConfigurableRightsPool'
+import {Balancer, Pool, PoolShare, PoolToken, Swap, TokenPrice} from '../../generated/schema'
+import {ConfigurableRightsPool, OwnershipTransferred} from '../../generated/Factory/ConfigurableRightsPool'
 
 /************************************
  ********** Pool Controls ***********

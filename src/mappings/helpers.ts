@@ -6,19 +6,11 @@ import {
   dataSource,
   ethereum
 } from '@graphprotocol/graph-ts'
-import {
-  Pool,
-  User,
-  PoolToken,
-  PoolShare,
-  TokenPrice,
-  Transaction,
-  Balancer
-} from '../types/schema'
-import { BTokenBytes } from '../types/templates/Pool/BTokenBytes'
-import { BToken } from '../types/templates/Pool/BToken'
-import { CRPFactory } from '../types/Factory/CRPFactory'
-import { ConfigurableRightsPool } from '../types/Factory/ConfigurableRightsPool'
+import {Balancer, Pool, PoolShare, PoolToken, TokenPrice, Transaction, User} from '../../generated/schema'
+import {BToken} from '../../generated/templates/Pool/BToken'
+import {BTokenBytes} from '../../generated/templates/Pool/BTokenBytes'
+import {CRPFactory} from '../../generated/Factory/CRPFactory'
+import {ConfigurableRightsPool} from '../../generated/Factory/ConfigurableRightsPool'
 
 export let ZERO_BD = BigDecimal.fromString('0')
 

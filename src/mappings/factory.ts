@@ -1,7 +1,4 @@
 import { Address, BigInt, BigDecimal } from '@graphprotocol/graph-ts'
-import { LOG_NEW_POOL } from '../types/Factory/Factory'
-import {Balancer, CounterLaab, Pool} from '../types/schema'
-import { Pool as PoolContract, CrpController as CrpControllerContract } from '../types/templates'
 import {log} from "@graphprotocol/graph-ts/"
 import {
   ZERO_BD,
@@ -12,9 +9,13 @@ import {
   getCrpRights,
   getCrpCap
 } from './helpers'
-import { ConfigurableRightsPool } from '../types/Factory/ConfigurableRightsPool';
 import {ethereum} from "@graphprotocol/graph-ts/index";
+import {Balancer, CounterLaab, Pool} from '../../generated/schema'
+import {LOG_NEW_POOL} from '../../generated/Factory/Factory'
+import {ConfigurableRightsPool} from '../../generated/Factory/ConfigurableRightsPool'
+import {CrpControllerContract, PoolContract} from '../types/templates'
 
+// TODO NZ: No more need for handleBlock, it was just for basic understanding
 export function handleBlock(event: ethereum.Event): void{
   let counter = CounterLaab.load('1')
   if (counter == null){
@@ -32,8 +33,8 @@ export function handleBlock(event: ethereum.Event): void{
 }
 
 export function handleNewPool(event: LOG_NEW_POOL): void {
+  log.info("SWAAP: new pool -> {} ;", ["3"]);
   let factory = Balancer.load('1')
-  log.info("LAAB: new pool", []);
 
   // if no factory yet, set up blank initial
   if (factory == null) {
@@ -83,9 +84,12 @@ export function handleNewPool(event: LOG_NEW_POOL): void {
   pool.tokensList = []
   pool.tx = event.transaction.hash
   pool.save()
+  log.info("SWAAP: new pool saved", []);
+
 
   factory.poolCount = factory.poolCount + 1
   factory.save()
 
+  // TODO NZ: Understand what is the need
   PoolContract._create(event.params.pool)
 }

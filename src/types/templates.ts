@@ -7,7 +7,7 @@ import {
 } from "@graphprotocol/graph-ts";
 import {dataSource} from '@graphprotocol/graph-ts/common/datasource'
 
-export class Pool extends DataSourceTemplate {
+export class PoolContract extends DataSourceTemplate {
 
   static _create(address: Address): void {
     DataSourceTemplate.create("Pool", [address.toHex()]);
@@ -18,7 +18,7 @@ export class Pool extends DataSourceTemplate {
   }
 }
 
-export class CrpController extends DataSourceTemplate {
+export class CrpControllerContract extends DataSourceTemplate {
   static _create(address: Address): void {
     DataSourceTemplate.create("CrpController", [address.toHex()]);
   }
