@@ -33,12 +33,12 @@ export function handleBlock(event: ethereum.Event): void{
 }
 
 export function handleNewPool(event: LOG_NEW_POOL): void {
-  log.info("NIK: 12 new pool -> {} ;", [event.params.pool.toHexString()]);
+  log.info("NIK: 13 new pool -> {} ;", [event.params.pool.toHexString()]);
   let factory = Balancer.load('1')
 
   // if no factory yet, set up blank initial
   if (factory == null) {
-    log.info("NIK: weird, no factory... ", []);
+    log.warning("NIK: weird, no factory saved yet... ", []);
 
     factory = new Balancer('1')
     factory.color = 'Bronze'

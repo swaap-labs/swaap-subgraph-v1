@@ -33,11 +33,17 @@ import {ConfigurableRightsPool, OwnershipTransferred} from '../../generated/Fact
 
 export function handleSetSwapFee(event: LOG_CALL): void {
   let poolId = event.address.toHex()
-  let pool = Pool.load(poolId)!;
+  let pool = Pool.load(poolId);
+  if(pool == null){
+    log.error("NIK LOGIC ERROR Saving fees to a null Pool {} - Returning too soon", [poolId])
+    return
+  }else{
+    log.debug("NIK : Able to retrieve the pool loaded {}", [poolId])
+  }
   let swapFee = hexToDecimal(event.params.data.toHexString().slice(-40), 18)
   pool.swapFee = swapFee
   pool.save()
-
+  log.debug("NIK : setSwapFee with tx", [event.transaction.hash.toHexString(), event.logIndex.toString()])
   saveTransaction(event, 'setSwapFee')
 }
 
@@ -78,7 +84,7 @@ export function handleFinalize(event: LOG_CALL): void {
   log.debug("NIK Pool : Finalizing the pool {}", [event.address.toHex()])
 
   let poolId = event.address.toHex()
-  log.warning("NIK handleFinalize loading pool {}", [poolId])
+  log.debug("NIK handleFinalize loading pool {}", [poolId])
   let pool = Pool.load(poolId)!;
   // let balance = BigDecimal.fromString('100')
   pool.finalized = true
@@ -101,7 +107,7 @@ export function handleFinalize(event: LOG_CALL): void {
   let factory = Balancer.load('1')!
   factory.finalizedPoolCount = factory.finalizedPoolCount + 1
   factory.save()
-
+  log.debug("NIK: saving transaction after finalization", [])
   saveTransaction(event, 'finalize')
 }
 
@@ -120,7 +126,7 @@ export function handleRebind(event: LOG_CALL): void {
   let denormWeight = hexToDecimal(event.params.data.toHexString().slice(138), 18)
 
   let poolTokenId = poolId.concat('-').concat(address.toHexString())
-  let poolToken = PoolToken.load(poolTokenId)!
+  let poolToken = PoolToken.load(poolTokenId)
   if (poolToken == null) {
     createPoolTokenEntity(poolTokenId, poolId, address.toHexString())
     poolToken = PoolToken.load(poolTokenId)!
@@ -208,7 +214,11 @@ export function handleJoinPool(event: LOG_JOIN): void {
 
   let address = event.params.tokenIn.toHex()
   let poolTokenId = poolId.concat('-').concat(address.toString())
-  let poolToken = PoolToken.load(poolTokenId)!
+  let poolToken = PoolToken.load(poolTokenId)
+  if(poolToken == null){
+    log.error("NIK LOGIC : Illegal null poolToken with id {}", [poolTokenId])
+    return
+  }
   let tokenAmountIn = tokenToDecimal(event.params.tokenAmountIn.toBigDecimal(), poolToken.decimals)
   let newAmount = poolToken.balance.plus(tokenAmountIn)
   poolToken.balance = newAmount
@@ -223,7 +233,14 @@ export function handleExitPool(event: LOG_EXIT): void {
 
   let address = event.params.tokenOut.toHex()
   let poolTokenId = poolId.concat('-').concat(address.toString())
-  let poolToken = PoolToken.load(poolTokenId)!
+  let poolToken = PoolToken.load(poolTokenId)
+  if (poolToken == null){
+    log.error("NIK LOGIC exiting pool : no poolToken with id {}", [poolTokenId])
+    return
+  }else{
+    log.debug("NIK exiting pool : Found poolToken with id {}", [poolTokenId])
+  }
+
   let tokenAmountOut = tokenToDecimal(event.params.tokenAmountOut.toBigDecimal(), poolToken.decimals)
   let newAmount = poolToken.balance.minus(tokenAmountOut)
   poolToken.balance = newAmount
@@ -252,7 +269,14 @@ export function handleSwap(event: LOG_SWAP): void {
 
   let tokenIn = event.params.tokenIn.toHex()
   let poolTokenInId = poolId.concat('-').concat(tokenIn.toString())
-  let poolTokenIn = PoolToken.load(poolTokenInId)!
+  let poolTokenIn = PoolToken.load(poolTokenInId)
+  if (poolTokenIn ==null){
+    log.error("NIK LOGIC no poolToken for IN swap {}", [poolTokenInId])
+    return
+  }else{
+    log.debug("NIK Found poolToken for IN swap {}", [poolTokenInId])
+  }
+
   let tokenAmountIn = tokenToDecimal(event.params.tokenAmountIn.toBigDecimal(), poolTokenIn.decimals)
   let newAmountIn = poolTokenIn.balance.plus(tokenAmountIn)
   poolTokenIn.balance = newAmountIn
@@ -261,6 +285,13 @@ export function handleSwap(event: LOG_SWAP): void {
   let tokenOut = event.params.tokenOut.toHex()
   let poolTokenOutId = poolId.concat('-').concat(tokenOut.toString())
   let poolTokenOut = PoolToken.load(poolTokenOutId)!
+  if (poolTokenOut ==null){
+    log.error("NIK LOGIC no poolToken for OUT swap {}", [poolTokenOutId])
+    return
+  }else{
+    log.debug("NIK Found poolToken for OUT swap {}", [poolTokenOutId])
+  }
+
   let tokenAmountOut = tokenToDecimal(event.params.tokenAmountOut.toBigDecimal(), poolTokenOut.decimals)
   let newAmountOut = poolTokenOut.balance.minus(tokenAmountOut)
   poolTokenOut.balance = newAmountOut
@@ -269,7 +300,7 @@ export function handleSwap(event: LOG_SWAP): void {
   updatePoolLiquidity(poolId)
 
   let swapId = event.transaction.hash.toHexString().concat('-').concat(event.logIndex.toString())
-  let swap = Swap.load(swapId)!
+  let swap = Swap.load(swapId)
   if (swap == null) {
     swap = new Swap(swapId)
   }
@@ -285,7 +316,7 @@ export function handleSwap(event: LOG_SWAP): void {
     for (let i: i32 = 0; i < tokensList.length; i++) {
       let tokenPriceId = tokensList[i].toHexString()
       if (!tokenOutPriceValue.gt(ZERO_BD) && tokenPriceId !== tokenOut) {
-        let tokenPrice = TokenPrice.load(tokenPriceId)!
+        let tokenPrice = TokenPrice.load(tokenPriceId)
         if (tokenPrice !== null && tokenPrice.price.gt(ZERO_BD)) {
           let poolTokenId = poolId.concat('-').concat(tokenPriceId)
           let poolToken = PoolToken.load(poolTokenId)!
@@ -355,7 +386,7 @@ export function handleSwap(event: LOG_SWAP): void {
  ************************************/
 
  export function handleTransfer(event: Transfer): void {
-  log.warning("handleTransfer", [])
+  log.debug("handleTransfer", [])
 
   let poolId = event.address.toHex()
 
@@ -365,12 +396,12 @@ export function handleSwap(event: LOG_SWAP): void {
   let isBurn = event.params.dst.toHex() == ZERO_ADDRESS
 
   let poolShareFromId = poolId.concat('-').concat(event.params.src.toHex())
-  log.warning("NIK loading poolShareFrom {}", [poolShareFromId])
-  let poolShareFrom = PoolShare.load(poolShareFromId)!
+  log.debug("NIK loading poolShareFrom {}", [poolShareFromId])
+  let poolShareFrom = PoolShare.load(poolShareFromId)
   let poolShareFromBalance = poolShareFrom == null ? ZERO_BD : poolShareFrom.balance
 
   let poolShareToId = poolId.concat('-').concat(event.params.dst.toHex())
-  let poolShareTo = PoolShare.load(poolShareToId)!
+  let poolShareTo = PoolShare.load(poolShareToId)
   let poolShareToBalance = poolShareTo == null ? ZERO_BD : poolShareTo.balance
 
   let pool = Pool.load(poolId)!;

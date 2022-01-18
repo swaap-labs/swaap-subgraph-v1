@@ -11,6 +11,7 @@ import {BToken} from '../../generated/templates/Pool/BToken'
 import {BTokenBytes} from '../../generated/templates/Pool/BTokenBytes'
 import {CRPFactory} from '../../generated/Factory/CRPFactory'
 import {ConfigurableRightsPool} from '../../generated/Factory/ConfigurableRightsPool'
+import {log} from "@graphprotocol/graph-ts/"
 
 export let ZERO_BD = BigDecimal.fromString('0')
 
@@ -253,9 +254,12 @@ export function decrPoolCount(active: boolean, finalized: boolean, crp: boolean)
 export function saveTransaction(event: ethereum.Event, eventName: string): void {
   let tx = event.transaction.hash.toHexString().concat('-').concat(event.logIndex.toString())
   let userAddress = event.transaction.from.toHex()
-  let transaction = Transaction.load(tx)!
+  let transaction = Transaction.load(tx)
   if (transaction == null) {
     transaction = new Transaction(tx)
+    log.debug("NIK : creating a new transaction object, tx ({}) not found", [tx])
+  }else{
+    log.debug("NIK : transaction object ({}) retrieved", [tx])
   }
   transaction.event = eventName
   transaction.poolAddress = event.address.toHex()
