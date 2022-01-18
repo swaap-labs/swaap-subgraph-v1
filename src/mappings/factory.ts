@@ -28,17 +28,17 @@ export function handleBlock(event: ethereum.Event): void{
   let zero = BigInt.fromI32(0)
 
   if ( block.equals(zero)){
-    log.debug("LAAB : block number {}", [counter.count.toString()])
+    log.debug("NIK : block number {}", [counter.count.toString()])
   }
 }
 
 export function handleNewPool(event: LOG_NEW_POOL): void {
-  log.info("DAATA: 11 new pool -> {} ;", [event.params.pool.toHexString()]);
+  log.info("NIK: 12 new pool -> {} ;", [event.params.pool.toHexString()]);
   let factory = Balancer.load('1')
 
   // if no factory yet, set up blank initial
   if (factory == null) {
-    log.info("DAATA: weird, no factory... ", []);
+    log.info("NIK: weird, no factory... ", []);
 
     factory = new Balancer('1')
     factory.color = 'Bronze'
@@ -86,7 +86,7 @@ export function handleNewPool(event: LOG_NEW_POOL): void {
   pool.tokensList = []
   pool.tx = event.transaction.hash
   pool.save()
-  log.info("DAATA: new pool saved", []);
+  log.info("NIK: new pool saved", []);
 
 
   factory.poolCount = factory.poolCount + 1

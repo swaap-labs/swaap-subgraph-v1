@@ -75,9 +75,10 @@ export function handleSetPublicSwap(event: LOG_CALL): void {
 }
 
 export function handleFinalize(event: LOG_CALL): void {
-  log.debug("DAATA Pool : Finalizing the pool {}", [event.address.toHex()])
+  log.debug("NIK Pool : Finalizing the pool {}", [event.address.toHex()])
 
   let poolId = event.address.toHex()
+  log.warning("NIK handleFinalize loading pool {}", [poolId])
   let pool = Pool.load(poolId)!;
   // let balance = BigDecimal.fromString('100')
   pool.finalized = true
@@ -245,7 +246,7 @@ export function handleExitPool(event: LOG_EXIT): void {
  ************************************/
 
 export function handleSwap(event: LOG_SWAP): void {
-  log.debug("DAATA Pool : Swapping the pool {}", [event.params.tokenIn.toHex()])
+  log.debug("NIK Pool : Swapping the pool {}", [event.params.tokenIn.toHex()])
 
   let poolId = event.address.toHex()
 
@@ -354,6 +355,8 @@ export function handleSwap(event: LOG_SWAP): void {
  ************************************/
 
  export function handleTransfer(event: Transfer): void {
+  log.warning("handleTransfer", [])
+
   let poolId = event.address.toHex()
 
   let ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
@@ -362,6 +365,7 @@ export function handleSwap(event: LOG_SWAP): void {
   let isBurn = event.params.dst.toHex() == ZERO_ADDRESS
 
   let poolShareFromId = poolId.concat('-').concat(event.params.src.toHex())
+  log.warning("NIK loading poolShareFrom {}", [poolShareFromId])
   let poolShareFrom = PoolShare.load(poolShareFromId)!
   let poolShareFromBalance = poolShareFrom == null ? ZERO_BD : poolShareFrom.balance
 
