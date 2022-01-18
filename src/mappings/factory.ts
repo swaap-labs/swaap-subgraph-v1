@@ -33,11 +33,13 @@ export function handleBlock(event: ethereum.Event): void{
 }
 
 export function handleNewPool(event: LOG_NEW_POOL): void {
-  log.info("SWAAP: new pool -> {} ;", ["3"]);
+  log.info("DAATA: 11 new pool -> {} ;", [event.params.pool.toHexString()]);
   let factory = Balancer.load('1')
 
   // if no factory yet, set up blank initial
   if (factory == null) {
+    log.info("DAATA: weird, no factory... ", []);
+
     factory = new Balancer('1')
     factory.color = 'Bronze'
     factory.poolCount = 0
@@ -84,7 +86,7 @@ export function handleNewPool(event: LOG_NEW_POOL): void {
   pool.tokensList = []
   pool.tx = event.transaction.hash
   pool.save()
-  log.info("SWAAP: new pool saved", []);
+  log.info("DAATA: new pool saved", []);
 
 
   factory.poolCount = factory.poolCount + 1

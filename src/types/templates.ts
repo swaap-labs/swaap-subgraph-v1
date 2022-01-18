@@ -6,10 +6,12 @@ import {
   DataSourceContext
 } from "@graphprotocol/graph-ts";
 import {dataSource} from '@graphprotocol/graph-ts/common/datasource'
+import {log} from '@graphprotocol/graph-ts/'
 
 export class PoolContract extends DataSourceTemplate {
 
   static _create(address: Address): void {
+    log.debug("DAATA template: creating template Pool with adr : {} ", [address.toHex()])
     DataSourceTemplate.create("Pool", [address.toHex()]);
   }
 

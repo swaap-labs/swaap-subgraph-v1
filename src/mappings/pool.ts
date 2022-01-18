@@ -9,6 +9,8 @@ import {
   Pool as BPool,
   Transfer
 } from '../../generated/templates/Pool/Pool'
+import {log} from "@graphprotocol/graph-ts/"
+
 
 import {
   hexToDecimal,
@@ -73,6 +75,8 @@ export function handleSetPublicSwap(event: LOG_CALL): void {
 }
 
 export function handleFinalize(event: LOG_CALL): void {
+  log.debug("DAATA Pool : Finalizing the pool {}", [event.address.toHex()])
+
   let poolId = event.address.toHex()
   let pool = Pool.load(poolId)!;
   // let balance = BigDecimal.fromString('100')
@@ -241,6 +245,8 @@ export function handleExitPool(event: LOG_EXIT): void {
  ************************************/
 
 export function handleSwap(event: LOG_SWAP): void {
+  log.debug("DAATA Pool : Swapping the pool {}", [event.params.tokenIn.toHex()])
+
   let poolId = event.address.toHex()
 
   let tokenIn = event.params.tokenIn.toHex()
