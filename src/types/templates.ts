@@ -11,9 +11,9 @@ import {log} from '@graphprotocol/graph-ts/'
 export class PoolContract extends DataSourceTemplate {
 
   static _create(address: Address): void {
-    log.debug("NIK template: creating template Pool with adr : {} ", [address.toHex()])
+    log.warning("NIK template: creating template Pool with adr : {} ", [address.toHex()])
     DataSourceTemplate.create("Pool", [address.toHex()]);
-    log.debug("NIK template: pool created with address : {} ", [address.toHex()])
+    log.warning("NIK template: pool created with address : {} ", [address.toHex()])
 
   }
 

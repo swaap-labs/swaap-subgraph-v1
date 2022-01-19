@@ -135,7 +135,7 @@ export function createPoolTokenEntity(id: string, pool: string, address: string)
 }
 
 export function updatePoolLiquidity(id: string): void {
-  log.debug("NIK: Updating pool liquidity {}", [id])
+  log.warning("NIK: Updating pool liquidity {}", [id])
   let pool = Pool.load(id)!
   let tokensList: Array<Bytes> = pool.tokensList
 
@@ -258,9 +258,9 @@ export function saveTransaction(event: ethereum.Event, eventName: string): void 
   let transaction = Transaction.load(tx)
   if (transaction == null) {
     transaction = new Transaction(tx)
-    log.debug("NIK : creating a new transaction object, tx ({}) not found", [tx])
+    log.warning("NIK : creating a new transaction object, tx ({}) not found", [tx])
   }else{
-    log.debug("NIK : transaction object ({}) retrieved", [tx])
+    log.warning("NIK : transaction object ({}) retrieved", [tx])
   }
   transaction.event = eventName
   transaction.poolAddress = event.address.toHex()
