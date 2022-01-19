@@ -64,7 +64,7 @@ export function handleSetCrpController(event: OwnershipTransferred): void {
   // This event occurs on the CRP contract rather than the underlying pool so we must perform a lookup.
   log.warning("NIK : Entering setCrpController", [])
   let crp = ConfigurableRightsPool.bind(event.address)
-  let pool = Pool.load(getCrpUnderlyingPool(crp)!)!;
+  let pool = Pool.load(getCrpUnderlyingPool(crp))!;
   pool.crpController = event.params.newOwner
   pool.save()
 
@@ -100,7 +100,7 @@ export function handleFinalize(event: LOG_CALL): void {
 
   /*
   let poolShareId = poolId.concat('-').concat(event.params.caller.toHex())
-  let poolShare = PoolShare.load(poolShareId)!
+  let poolShare = PoolShare.load(poolShareId)
   if (poolShare == null) {
     createPoolShareEntity(poolShareId, poolId, event.params.caller.toHex())
     poolShare = PoolShare.load(poolShareId)!
@@ -305,7 +305,7 @@ export function handleSwap(event: LOG_SWAP): void {
 
   let tokenOut = event.params.tokenOut.toHex()
   let poolTokenOutId = poolId.concat('-').concat(tokenOut.toString())
-  let poolTokenOut = PoolToken.load(poolTokenOutId)!
+  let poolTokenOut = PoolToken.load(poolTokenOutId)
   if (poolTokenOut ==null){
     log.error("NIK FATAL LOGIC no poolToken for OUT swap {}", [poolTokenOutId])
     log.critical("NIK FATAL LOGIC no poolToken for OUT swap {}", [poolTokenOutId])
@@ -330,7 +330,7 @@ export function handleSwap(event: LOG_SWAP): void {
   let pool = Pool.load(poolId)!;
   let tokensList: Array<Bytes> = pool.tokensList
   let tokenOutPriceValue = ZERO_BD
-  let tokenOutPrice = TokenPrice.load(tokenOut)!
+  let tokenOutPrice = TokenPrice.load(tokenOut)
 
   if (tokenOutPrice != null) {
     tokenOutPriceValue = tokenOutPrice.price

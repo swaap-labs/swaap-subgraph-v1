@@ -223,7 +223,7 @@ export function updatePoolLiquidity(id: string): void {
 
   for (let i: i32 = 0; i < tokensList.length; i++) {
     let tokenPriceId = tokensList[i].toHexString()
-    let tokenPrice = TokenPrice.load(tokenPriceId)!
+    let tokenPrice = TokenPrice.load(tokenPriceId)
     if (tokenPrice !== null) {
       let poolTokenId = id.concat('-').concat(tokenPriceId)
       let poolToken = PoolToken.load(poolTokenId)!
@@ -231,6 +231,8 @@ export function updatePoolLiquidity(id: string): void {
         denormWeight = poolToken.denormWeight
         liquidity = tokenPrice.price.times(poolToken.balance).div(poolToken.denormWeight).times(pool.totalWeight)
       }
+    }else{
+      log.warning("NIK: no token price set yet for token {}", [tokenPriceId])
     }
   }
 
@@ -289,12 +291,14 @@ export function isCrp(address: Address): boolean {
   return isCrp.value
 }
 
-export function getCrpUnderlyingPool(crp: ConfigurableRightsPool): string | null {
+// TODO NZ: There must be edge case where the return value is null
+export function getCrpUnderlyingPool(crp: ConfigurableRightsPool): string {
   let bPool = crp.try_bPool()
-  if (bPool.reverted) return null;
+  if (bPool.reverted) return ""; // changed null by ""
   return bPool.value.toHexString()
 }
 
+// TODO NZ: There must be edge case where the return value is null
 export function getCrpController(crp: ConfigurableRightsPool): string | null {
   let controller = crp.try_getController()
   if (controller.reverted) return null;
