@@ -135,6 +135,7 @@ export function createPoolTokenEntity(id: string, pool: string, address: string)
 }
 
 export function updatePoolLiquidity(id: string): void {
+  log.debug("NIK: Updating pool liquidity {}", [id])
   let pool = Pool.load(id)!
   let tokensList: Array<Bytes> = pool.tokensList
 

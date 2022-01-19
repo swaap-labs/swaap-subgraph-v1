@@ -9,31 +9,15 @@ import {
   getCrpRights,
   getCrpCap
 } from './helpers'
-import {ethereum} from "@graphprotocol/graph-ts/index";
-import {Balancer, CounterLaab, Pool} from '../../generated/schema'
+import {Balancer, Pool} from '../../generated/schema'
 import {LOG_NEW_POOL} from '../../generated/Factory/Factory'
 import {ConfigurableRightsPool} from '../../generated/Factory/ConfigurableRightsPool'
 import {CrpControllerContract, PoolContract} from '../types/templates'
 
-// TODO NZ: No more need for handleBlock, it was just for basic understanding
-export function handleBlock(event: ethereum.Event): void{
-  let counter = CounterLaab.load('1')
-  if (counter == null){
-    counter = new CounterLaab('1')
-    counter.save()
-  }else{
-    counter.count = counter.count.plus(BigInt.fromI32(1))
-  }
-  let block = event.block.number.mod(BigInt.fromI32(1000));
-  let zero = BigInt.fromI32(0)
 
-  if ( block.equals(zero)){
-    log.debug("NIK : block number {}", [counter.count.toString()])
-  }
-}
 
 export function handleNewPool(event: LOG_NEW_POOL): void {
-  log.info("NIK: 13 new pool -> {} ;", [event.params.pool.toHexString()]);
+  log.info("NIK: 13 entering handleNewPool -> {} ;", [event.params.pool.toHexString()]);
   let factory = Balancer.load('1')
 
   // if no factory yet, set up blank initial
@@ -94,4 +78,5 @@ export function handleNewPool(event: LOG_NEW_POOL): void {
 
   // TODO NZ: Understand what is the need
   PoolContract._create(event.params.pool)
+  log.info("NIK: exiting handleNewPool", []);
 }

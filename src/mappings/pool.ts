@@ -32,6 +32,7 @@ import {ConfigurableRightsPool, OwnershipTransferred} from '../../generated/Fact
  ************************************/
 
 export function handleSetSwapFee(event: LOG_CALL): void {
+  log.debug("NIK : Entering setSwapFees", [])
   let poolId = event.address.toHex()
   let pool = Pool.load(poolId);
   if(pool == null){
@@ -48,6 +49,7 @@ export function handleSetSwapFee(event: LOG_CALL): void {
 }
 
 export function handleSetController(event: LOG_CALL): void {
+  log.debug("NIK : Entering setController", [])
   let poolId = event.address.toHex()
   let pool = Pool.load(poolId)!;
   let controller = Address.fromString(event.params.data.toHexString().slice(-40))
@@ -59,6 +61,7 @@ export function handleSetController(event: LOG_CALL): void {
 
 export function handleSetCrpController(event: OwnershipTransferred): void {
   // This event occurs on the CRP contract rather than the underlying pool so we must perform a lookup.
+  log.debug("NIK : Entering setCrpController", [])
   let crp = ConfigurableRightsPool.bind(event.address)
   let pool = Pool.load(getCrpUnderlyingPool(crp)!)!;
   pool.crpController = event.params.newOwner
@@ -71,6 +74,7 @@ export function handleSetCrpController(event: OwnershipTransferred): void {
 
 
 export function handleSetPublicSwap(event: LOG_CALL): void {
+  log.debug("NIK : Entering handleSetPublicSwap", [])
   let poolId = event.address.toHex()
   let pool = Pool.load(poolId)!;
   let publicSwap = event.params.data.toHexString().slice(-1) == '1'
@@ -112,6 +116,7 @@ export function handleFinalize(event: LOG_CALL): void {
 }
 
 export function handleRebind(event: LOG_CALL): void {
+  log.debug("NIK: entering handleRebind", [])
   let poolId = event.address.toHex()
   let pool = Pool.load(poolId)!;
   let tokenBytes = Bytes.fromHexString(event.params.data.toHexString().slice(34,74)) as Bytes
@@ -126,8 +131,12 @@ export function handleRebind(event: LOG_CALL): void {
   let denormWeight = hexToDecimal(event.params.data.toHexString().slice(138), 18)
 
   let poolTokenId = poolId.concat('-').concat(address.toHexString())
+  log.debug("NIK: Loading Pool token {}", [poolTokenId])
+
   let poolToken = PoolToken.load(poolTokenId)
   if (poolToken == null) {
+    log.debug("NIK: Pool token is null, creating it {}", [poolTokenId])
+
     createPoolTokenEntity(poolTokenId, poolId, address.toHexString())
     poolToken = PoolToken.load(poolTokenId)!
     pool.totalWeight =pool.totalWeight.plus( denormWeight)
@@ -144,7 +153,10 @@ export function handleRebind(event: LOG_CALL): void {
 
   poolToken.balance = balance
   poolToken.denormWeight = denormWeight
+  log.debug("NIK: Saving Pool token {}", [poolTokenId])
+
   poolToken.save()
+  log.debug("NIK: Pool token saved {}", [poolTokenId])
 
   if (balance.equals(ZERO_BD)) {
     decrPoolCount(pool.active, pool.finalized, pool.crp)
@@ -157,6 +169,8 @@ export function handleRebind(event: LOG_CALL): void {
 }
 
 export function handleUnbind(event: LOG_CALL): void {
+  log.debug("NIK : entering Unbind", [])
+
   let poolId = event.address.toHex()
   let pool = Pool.load(poolId)!;
   let tokenBytes = Bytes.fromHexString(event.params.data.toHexString().slice(-40)) as Bytes
@@ -179,6 +193,7 @@ export function handleUnbind(event: LOG_CALL): void {
 }
 
 export function handleGulp(call: GulpCall): void {
+  log.warning("NIK : Entering handleGulp", [])
   let poolId = call.to.toHexString()
   let pool = Pool.load(poolId)!;
 
@@ -207,6 +222,7 @@ export function handleGulp(call: GulpCall): void {
  ************************************/
 
 export function handleJoinPool(event: LOG_JOIN): void {
+  log.debug("NIK : Entering handleJoinPool", [])
   let poolId = event.address.toHex()
   let pool = Pool.load(poolId)!;
   pool.joinsCount =pool.joinsCount.plus( BigInt.fromI32(1))
@@ -229,6 +245,7 @@ export function handleJoinPool(event: LOG_JOIN): void {
 }
 
 export function handleExitPool(event: LOG_EXIT): void {
+  log.debug("NIK : Entering handleExitPool", [])
   let poolId = event.address.toHex()
 
   let address = event.params.tokenOut.toHex()
@@ -263,7 +280,7 @@ export function handleExitPool(event: LOG_EXIT): void {
  ************************************/
 
 export function handleSwap(event: LOG_SWAP): void {
-  log.debug("NIK Pool : Swapping the pool {}", [event.params.tokenIn.toHex()])
+  log.debug("NIK Pool : Entering handleSwap ; Swapping the pool {}", [event.params.tokenIn.toHex()])
 
   let poolId = event.address.toHex()
 
@@ -286,7 +303,7 @@ export function handleSwap(event: LOG_SWAP): void {
   let poolTokenOutId = poolId.concat('-').concat(tokenOut.toString())
   let poolTokenOut = PoolToken.load(poolTokenOutId)!
   if (poolTokenOut ==null){
-    log.error("NIK LOGIC no poolToken for OUT swap {}", [poolTokenOutId])
+    log.error("NIK FATAL LOGIC no poolToken for OUT swap {}", [poolTokenOutId])
     return
   }else{
     log.debug("NIK Found poolToken for OUT swap {}", [poolTokenOutId])
@@ -386,7 +403,7 @@ export function handleSwap(event: LOG_SWAP): void {
  ************************************/
 
  export function handleTransfer(event: Transfer): void {
-  log.debug("handleTransfer", [])
+  log.debug("NIK: entering handleTransfer", [])
 
   let poolId = event.address.toHex()
 
