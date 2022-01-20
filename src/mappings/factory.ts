@@ -15,6 +15,7 @@ import {ConfigurableRightsPool} from '../../generated/Factory/ConfigurableRights
 import {CrpControllerContract, PoolContract} from '../types/templates'
 
 
+log.warning ("NIK PRICE starting", []);
 
 export function handleNewPool(event: LOG_NEW_POOL): void {
   log.info("NIK: 13 entering handleNewPool -> {} ;", [event.params.pool.toHexString()]);

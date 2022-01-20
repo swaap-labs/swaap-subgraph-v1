@@ -11,7 +11,7 @@ import {BToken} from '../../generated/templates/Pool/BToken'
 import {BTokenBytes} from '../../generated/templates/Pool/BTokenBytes'
 import {CRPFactory} from '../../generated/Factory/CRPFactory'
 import {ConfigurableRightsPool} from '../../generated/Factory/ConfigurableRightsPool'
-import {log} from "@graphprotocol/graph-ts/"
+import {log} from '@graphprotocol/graph-ts/'
 
 export let ZERO_BD = BigDecimal.fromString('0')
 
@@ -22,6 +22,7 @@ let WETH = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2'
 let USD = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'
 let DAI = '0x6b175474e89094c44da98b954eedeac495271d0f'
 let CRP_FACTORY = '0xed52D8E202401645eDAD1c0AA21e872498ce47D0'
+let WBTC = ''
 
 if (network == 'kovan') {
   WETH = '0xd0a1e359811322d97991e03f863a0c30c2cf029c'
@@ -32,10 +33,11 @@ if (network == 'kovan') {
 
 // TODO: Nik we are on rinkeby - this is awful programming, just testing
 if (network == 'rinkeby' || true) {
-  WETH = '0xc778417e063141139fce010982780140aa0cd5ab'
-  USD = '0x21f3179cadae46509f615428f639e38123a508ac'
-  DAI = '0x947b4082324af403047154f9f26f14538d775194'
-  CRP_FACTORY = '0xA3F9145CB0B50D907930840BB2dcfF4146df8Ab4'
+  WETH = '0x4848683f3cC566E3588bFd6953FaAA7176968965'.toLowerCase()
+  USD = '0x0aBABf7Cd9De9508D1B69B2dd2d374fA88d384d3'.toLowerCase()
+  DAI = '0x0aBABf7Cd9De9508D1B69B2dd2d374fA88d384d3'.toLowerCase()
+  WBTC = '0xead28cb59D01ad96c9CEEb486380FB514253f8eD'.toLowerCase()
+  CRP_FACTORY = '0xA3F9145CB0B50D907930840BB2dcfF4146df8Ab4'.toLowerCase()
 }
 
 export function hexToDecimal(hexString: string, decimals: i32): BigDecimal {
@@ -67,6 +69,7 @@ export function createPoolShareEntity(id: string, pool: string, user: string): v
 }
 
 export function createPoolTokenEntity(id: string, pool: string, address: string): void {
+  log.warning('NIK PRICE : Creating PoolToken from address {} - {}, {}, {}', [getSymbol(address), id, pool, address])
   let token = BToken.bind(Address.fromString(address))
   let tokenBytes = BTokenBytes.bind(Address.fromString(address))
   let symbol = ''
@@ -123,6 +126,18 @@ export function createPoolTokenEntity(id: string, pool: string, address: string)
   */
   // !!! COMMENT THE LINES ABOVE OUT FOR NON-LOCAL DEPLOYMENT
 
+  // On Swaap Rinkeby
+  if (address == WETH)
+    symbol = 'WETH'
+  else if (address == DAI)
+    symbol = 'DAI'
+  else if (address == WBTC)
+    symbol = 'WBTC'
+  else {
+    log.error('NIK PRICE : helpers-137 ; cant find preset token address {}', [address])
+  }
+
+
   let poolToken = new PoolToken(id)
   poolToken.poolId = pool
   poolToken.address = address
@@ -131,21 +146,29 @@ export function createPoolTokenEntity(id: string, pool: string, address: string)
   poolToken.decimals = decimals
   poolToken.balance = ZERO_BD
   poolToken.denormWeight = ZERO_BD
+
+  log.warning('NIK PRICE : saving poolToken in poolId {} as {}', [pool, symbol])
   poolToken.save()
 }
 
 export function updatePoolLiquidity(id: string): void {
-  log.warning("NIK: Updating pool liquidity {}", [id])
+  log.warning('NIK PRICE: Updating pool liquidity {}', [id])
   let pool = Pool.load(id)!
   let tokensList: Array<Bytes> = pool.tokensList
 
   if (pool.tokensCount.equals(BigInt.fromI32(0))) {
     pool.liquidity = ZERO_BD
     pool.save()
+    log.warning('NIK PRICE : pool tokens count == 0', [])
     return
   }
 
-  if (!tokensList || pool.tokensCount.lt(BigInt.fromI32(2)) || !pool.publicSwap) return
+  if (!tokensList || pool.tokensCount.lt(BigInt.fromI32(2)) || !pool.publicSwap) {
+    log.warning('NIK PRICE : no token list, or single asset or not public', [])
+    return
+  } else {
+    log.warning('NIK PRICE : working on {}-{}', [tokensList[0].toHexString(), tokensList[1].toHexString()])
+  }
 
   // Find pool liquidity
 
@@ -155,25 +178,34 @@ export function updatePoolLiquidity(id: string): void {
 
   if (tokensList.includes(Address.fromString(USD))) {
     let usdPoolTokenId = id.concat('-').concat(USD)
-    let usdPoolToken = PoolToken.load(usdPoolTokenId)!
+    let usdPoolToken = PoolToken.load(usdPoolTokenId)
+    if (usdPoolToken == null) {
+      log.error('NIK PRICE : cant find USD poolToken {}', [usdPoolTokenId])
+      //log.critical("USD Pool token not found", [])
+      return
+    }
     poolLiquidity = usdPoolToken.balance.div(usdPoolToken.denormWeight).times(pool.totalWeight)
     hasPrice = true
     hasUsdPrice = true
   } else if (tokensList.includes(Address.fromString(WETH))) {
-    let wethTokenPrice = TokenPrice.load(WETH)!
+    let wethTokenPrice = TokenPrice.load(WETH)
     if (wethTokenPrice !== null) {
       let poolTokenId = id.concat('-').concat(WETH)
       let poolToken = PoolToken.load(poolTokenId)!
       poolLiquidity = wethTokenPrice.price.times(poolToken.balance).div(poolToken.denormWeight).times(pool.totalWeight)
       hasPrice = true
+    } else {
+      log.error('NIK PRICE: WETH price not found', [])
     }
   } else if (tokensList.includes(Address.fromString(DAI))) {
-    let daiTokenPrice = TokenPrice.load(DAI)!
+    let daiTokenPrice = TokenPrice.load(DAI)
     if (daiTokenPrice !== null) {
       let poolTokenId = id.concat('-').concat(DAI)
       let poolToken = PoolToken.load(poolTokenId)!
       poolLiquidity = daiTokenPrice.price.times(poolToken.balance).div(poolToken.denormWeight).times(pool.totalWeight)
       hasPrice = true
+    } else {
+      log.error('NIK PRICE: DAI price not found', [])
     }
   }
 
@@ -182,7 +214,7 @@ export function updatePoolLiquidity(id: string): void {
   if (hasPrice) {
     for (let i: i32 = 0; i < tokensList.length; i++) {
       let tokenPriceId = tokensList[i].toHexString()
-      let tokenPrice = TokenPrice.load(tokenPriceId)!
+      let tokenPrice = TokenPrice.load(tokenPriceId)
       if (tokenPrice == null) {
         tokenPrice = new TokenPrice(tokenPriceId)
         tokenPrice.poolTokenId = ''
@@ -231,8 +263,8 @@ export function updatePoolLiquidity(id: string): void {
         denormWeight = poolToken.denormWeight
         liquidity = tokenPrice.price.times(poolToken.balance).div(poolToken.denormWeight).times(pool.totalWeight)
       }
-    }else{
-      log.warning("NIK: no token price set yet for token {}", [tokenPriceId])
+    } else {
+      log.warning('NIK: no token price set yet for token {}', [tokenPriceId])
     }
   }
 
@@ -260,9 +292,9 @@ export function saveTransaction(event: ethereum.Event, eventName: string): void 
   let transaction = Transaction.load(tx)
   if (transaction == null) {
     transaction = new Transaction(tx)
-    log.warning("NIK : creating a new transaction object, tx ({}) not found", [tx])
-  }else{
-    log.warning("NIK : transaction object ({}) retrieved", [tx])
+    log.warning('NIK : creating a new transaction object, tx ({}) not found', [tx])
+  } else {
+    log.warning('NIK : transaction object ({}) retrieved', [tx])
   }
   transaction.event = eventName
   transaction.poolAddress = event.address.toHex()
@@ -294,14 +326,14 @@ export function isCrp(address: Address): boolean {
 // TODO NZ: There must be edge case where the return value is null
 export function getCrpUnderlyingPool(crp: ConfigurableRightsPool): string {
   let bPool = crp.try_bPool()
-  if (bPool.reverted) return ""; // changed null by ""
+  if (bPool.reverted) return '' // changed null by ""
   return bPool.value.toHexString()
 }
 
 // TODO NZ: There must be edge case where the return value is null
 export function getCrpController(crp: ConfigurableRightsPool): string | null {
   let controller = crp.try_getController()
-  if (controller.reverted) return null;
+  if (controller.reverted) return null
   return controller.value.toHexString()
 }
 
@@ -334,4 +366,17 @@ export function getCrpRights(crp: ConfigurableRightsPool): string[] {
   if (rights.value.value4) rightsArr.push('canWhitelistLPs')
   if (rights.value.value5) rightsArr.push('canChangeCap')
   return rightsArr
+}
+
+function getSymbol(address: string): string {
+
+  if (address == WETH) return 'WETH'
+  if (address == USD) return 'DAI'
+  if (address == DAI) return 'DAI'
+  if (address == WBTC) return 'WBTC'
+
+  if (address.includes('-')) {
+    return 'Composed'
+  }
+  return 'Unknown'
 }
