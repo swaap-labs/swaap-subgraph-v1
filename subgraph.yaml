@@ -8,7 +8,7 @@ dataSources:
     name: Factory
     network: rinkeby
     source:
-      address: "0x24bbB5FB62611C2ed75a4b7f9E0cbB88239EA736"
+      address: "0x1958AE4a8De1D8E1D649B8DEB21A00876dd722Bb"
       abi: Factory
       startBlock: 9562475
     mapping:
@@ -45,9 +45,9 @@ templates:
         - Swap
       abis:
         - name: Pool
-          file: ./abis/BPool.json
+          file: ./abis/Pool.json
         - name: BToken
-          file: ./abis/BToken.json
+          file: ./abis/PoolToken.json
         - name: BTokenBytes
           file: ./abis/BTokenBytes32.json
       eventHandlers:
@@ -76,7 +76,7 @@ templates:
           handler: handleJoinPool
         - event: LOG_EXIT(indexed address,indexed address,uint256)
           handler: handleExitPool
-        - event: LOG_SWAP(indexed address,indexed address,indexed address,uint256,uint256)
+        - event: LOG_SWAP(indexed address,indexed address,indexed address,uint256,uint256,uint256)
           handler: handleSwap
         - event: Transfer(indexed address,indexed address,uint256)
           handler: handleTransfer

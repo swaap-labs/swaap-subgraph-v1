@@ -7,10 +7,9 @@ import {
   LOG_JOIN,
   LOG_SWAP,
   Pool as BPool,
-  Transfer
+  Transfer,
 } from '../../generated/templates/Pool/Pool'
-import {log} from "@graphprotocol/graph-ts/"
-
+import { log } from '@graphprotocol/graph-ts/'
 
 import {
   hexToDecimal,
@@ -22,38 +21,59 @@ import {
   getCrpUnderlyingPool,
   saveTransaction,
   ZERO_BD,
-  decrPoolCount
+  decrPoolCount,
 } from './helpers'
-import {Balancer, Pool, PoolShare, PoolToken, Swap, TokenPrice} from '../../generated/schema'
-import {ConfigurableRightsPool, OwnershipTransferred} from '../../generated/Factory/ConfigurableRightsPool'
+import {
+  Balancer,
+  Pool,
+  PoolShare,
+  PoolToken,
+  Swap,
+  TokenPrice,
+} from '../../generated/schema'
+import {
+  ConfigurableRightsPool,
+  OwnershipTransferred,
+} from '../../generated/Factory/ConfigurableRightsPool'
 
 /************************************
  ********** Pool Controls ***********
  ************************************/
 
 export function handleSetSwapFee(event: LOG_CALL): void {
-  log.warning("NIK : Entering setSwapFees", [])
+  log.warning('NIK : Entering setSwapFees', [])
   let poolId = event.address.toHex()
-  let pool = Pool.load(poolId);
-  if(pool == null){
-    log.error("NIK LOGIC ERROR Saving fees to a null Pool {} - Returning too soon", [poolId])
-    log.critical("NIK LOGIC ERROR Saving fees to a null Pool {} - Returning too soon", [poolId])
+  let pool = Pool.load(poolId)
+  if (pool == null) {
+    log.error(
+      'NIK LOGIC ERROR Saving fees to a null Pool {} - Returning too soon',
+      [poolId]
+    )
+    log.critical(
+      'NIK LOGIC ERROR Saving fees to a null Pool {} - Returning too soon',
+      [poolId]
+    )
     return
-  }else{
-    log.warning("NIK : Able to retrieve the pool loaded {}", [poolId])
+  } else {
+    log.warning('NIK : Able to retrieve the pool loaded {}', [poolId])
   }
   let swapFee = hexToDecimal(event.params.data.toHexString().slice(-40), 18)
   pool.swapFee = swapFee
   pool.save()
-  log.warning("NIK : setSwapFee with tx", [event.transaction.hash.toHexString(), event.logIndex.toString()])
+  log.warning('NIK : setSwapFee with tx', [
+    event.transaction.hash.toHexString(),
+    event.logIndex.toString(),
+  ])
   saveTransaction(event, 'setSwapFee')
 }
 
 export function handleSetController(event: LOG_CALL): void {
-  log.warning("NIK : Entering setController", [])
+  log.warning('NIK : Entering setController', [])
   let poolId = event.address.toHex()
-  let pool = Pool.load(poolId)!;
-  let controller = Address.fromString(event.params.data.toHexString().slice(-40))
+  let pool = Pool.load(poolId)!
+  let controller = Address.fromString(
+    event.params.data.toHexString().slice(-40)
+  )
   pool.controller = controller
   pool.save()
 
@@ -62,9 +82,9 @@ export function handleSetController(event: LOG_CALL): void {
 
 export function handleSetCrpController(event: OwnershipTransferred): void {
   // This event occurs on the CRP contract rather than the underlying pool so we must perform a lookup.
-  log.warning("NIK : Entering setCrpController", [])
+  log.warning('NIK : Entering setCrpController', [])
   let crp = ConfigurableRightsPool.bind(event.address)
-  let pool = Pool.load(getCrpUnderlyingPool(crp))!;
+  let pool = Pool.load(getCrpUnderlyingPool(crp))!
   pool.crpController = event.params.newOwner
   pool.save()
 
@@ -73,11 +93,10 @@ export function handleSetCrpController(event: OwnershipTransferred): void {
   saveTransaction(event, 'setCrpController')
 }
 
-
 export function handleSetPublicSwap(event: LOG_CALL): void {
-  log.warning("NIK : Entering handleSetPublicSwap", [])
+  log.warning('NIK : Entering handleSetPublicSwap', [])
   let poolId = event.address.toHex()
-  let pool = Pool.load(poolId)!;
+  let pool = Pool.load(poolId)!
   let publicSwap = event.params.data.toHexString().slice(-1) == '1'
   pool.publicSwap = publicSwap
   pool.save()
@@ -86,11 +105,11 @@ export function handleSetPublicSwap(event: LOG_CALL): void {
 }
 
 export function handleFinalize(event: LOG_CALL): void {
-  log.warning("NIK Pool : Finalizing the pool {}", [event.address.toHex()])
+  log.warning('NIK Pool : Finalizing the pool {}', [event.address.toHex()])
 
   let poolId = event.address.toHex()
-  log.warning("NIK handleFinalize loading pool {}", [poolId])
-  let pool = Pool.load(poolId)!;
+  log.warning('NIK handleFinalize loading pool {}', [poolId])
+  let pool = Pool.load(poolId)!
   // let balance = BigDecimal.fromString('100')
   pool.finalized = true
   pool.symbol = 'BPT'
@@ -112,52 +131,62 @@ export function handleFinalize(event: LOG_CALL): void {
   let factory = Balancer.load('1')!
   factory.finalizedPoolCount = factory.finalizedPoolCount + 1
   factory.save()
-  log.warning("NIK: saving transaction after finalization", [])
+  log.warning('NIK: saving transaction after finalization', [])
   saveTransaction(event, 'finalize')
 }
 
 export function handleRebind(event: LOG_CALL): void {
-  log.warning("NIK: entering handleRebind", [])
+  log.warning('NIK: entering handleRebind', [])
   let poolId = event.address.toHex()
-  let pool = Pool.load(poolId)!;
-  let tokenBytes = Bytes.fromHexString(event.params.data.toHexString().slice(34,74)) as Bytes
+  let pool = Pool.load(poolId)!
+  let tokenBytes = Bytes.fromHexString(
+    event.params.data.toHexString().slice(34, 74)
+  ) as Bytes
   let tokensList = pool.tokensList || []
-  if (tokensList.indexOf(tokenBytes) == -1 ) {
+  if (tokensList.indexOf(tokenBytes) == -1) {
     tokensList.push(tokenBytes)
   }
   pool.tokensList = tokensList
   pool.tokensCount = BigInt.fromI32(tokensList.length)
 
-  let address = Address.fromString(event.params.data.toHexString().slice(34,74))
-  let denormWeight = hexToDecimal(event.params.data.toHexString().slice(138), 18)
+  let address = Address.fromString(
+    event.params.data.toHexString().slice(34, 74)
+  )
+  let denormWeight = hexToDecimal(
+    event.params.data.toHexString().slice(138),
+    18
+  )
 
   let poolTokenId = poolId.concat('-').concat(address.toHexString())
-  log.warning("NIK: Loading Pool token {}", [poolTokenId])
+  log.warning('NIK: Loading Pool token {}', [poolTokenId])
 
   let poolToken = PoolToken.load(poolTokenId)
   if (poolToken == null) {
-    log.warning("NIK: Pool token is null, creating it {}", [poolTokenId])
+    log.warning('NIK: Pool token is null, creating it {}', [poolTokenId])
 
     createPoolTokenEntity(poolTokenId, poolId, address.toHexString())
     poolToken = PoolToken.load(poolTokenId)!
-    pool.totalWeight =pool.totalWeight.plus( denormWeight)
+    pool.totalWeight = pool.totalWeight.plus(denormWeight)
   } else {
     let oldWeight = poolToken.denormWeight
     if (denormWeight > oldWeight) {
-      pool.totalWeight = pool.totalWeight.plus(denormWeight.minus( oldWeight))
+      pool.totalWeight = pool.totalWeight.plus(denormWeight.minus(oldWeight))
     } else {
-      pool.totalWeight = pool.totalWeight.minus(oldWeight.minus( denormWeight))
+      pool.totalWeight = pool.totalWeight.minus(oldWeight.minus(denormWeight))
     }
   }
 
-  let balance = hexToDecimal(event.params.data.toHexString().slice(74,138), poolToken.decimals)
+  let balance = hexToDecimal(
+    event.params.data.toHexString().slice(74, 138),
+    poolToken.decimals
+  )
 
   poolToken.balance = balance
   poolToken.denormWeight = denormWeight
-  log.warning("NIK: Saving Pool token {}", [poolTokenId])
+  log.warning('NIK: Saving Pool token {}', [poolTokenId])
 
   poolToken.save()
-  log.warning("NIK: Pool token saved {}", [poolTokenId])
+  log.warning('NIK: Pool token saved {}', [poolTokenId])
 
   if (balance.equals(ZERO_BD)) {
     decrPoolCount(pool.active, pool.finalized, pool.crp)
@@ -170,17 +199,18 @@ export function handleRebind(event: LOG_CALL): void {
 }
 
 export function handleUnbind(event: LOG_CALL): void {
-  log.warning("NIK : entering Unbind", [])
+  log.warning('NIK : entering Unbind', [])
 
   let poolId = event.address.toHex()
-  let pool = Pool.load(poolId)!;
-  let tokenBytes = Bytes.fromHexString(event.params.data.toHexString().slice(-40)) as Bytes
+  let pool = Pool.load(poolId)!
+  let tokenBytes = Bytes.fromHexString(
+    event.params.data.toHexString().slice(-40)
+  ) as Bytes
   let tokensList = pool.tokensList || []
   let index = tokensList.indexOf(tokenBytes)
   tokensList.splice(index, 1)
   pool.tokensList = tokensList
   pool.tokensCount = BigInt.fromI32(tokensList.length)
-
 
   let address = Address.fromString(event.params.data.toHexString().slice(-40))
   let poolTokenId = poolId.concat('-').concat(address.toHexString())
@@ -194,9 +224,9 @@ export function handleUnbind(event: LOG_CALL): void {
 }
 
 export function handleGulp(call: GulpCall): void {
-  log.warning("NIK : Entering handleGulp", [])
+  log.warning('NIK : Entering handleGulp', [])
   let poolId = call.to.toHexString()
-  let pool = Pool.load(poolId)!;
+  let pool = Pool.load(poolId)!
 
   let address = call.inputs.token.toHexString()
 
@@ -204,7 +234,7 @@ export function handleGulp(call: GulpCall): void {
   let balanceCall = bpool.try_getBalance(Address.fromString(address))
 
   let poolTokenId = poolId.concat('-').concat(address)
-  let poolToken = PoolToken.load(poolTokenId)!;
+  let poolToken = PoolToken.load(poolTokenId)!
 
   if (poolToken != null) {
     let balance = ZERO_BD
@@ -223,21 +253,24 @@ export function handleGulp(call: GulpCall): void {
  ************************************/
 
 export function handleJoinPool(event: LOG_JOIN): void {
-  log.warning("NIK : Entering handleJoinPool", [])
+  log.warning('NIK : Entering handleJoinPool', [])
   let poolId = event.address.toHex()
-  let pool = Pool.load(poolId)!;
-  pool.joinsCount =pool.joinsCount.plus( BigInt.fromI32(1))
+  let pool = Pool.load(poolId)!
+  pool.joinsCount = pool.joinsCount.plus(BigInt.fromI32(1))
   pool.save()
 
   let address = event.params.tokenIn.toHex()
   let poolTokenId = poolId.concat('-').concat(address.toString())
   let poolToken = PoolToken.load(poolTokenId)
-  if(poolToken == null){
-    log.error("NIK LOGIC : Illegal null poolToken with id {}", [poolTokenId])
-    log.critical("NIK LOGIC : Illegal null poolToken with id {}", [poolTokenId])
+  if (poolToken == null) {
+    log.error('NIK LOGIC : Illegal null poolToken with id {}', [poolTokenId])
+    log.critical('NIK LOGIC : Illegal null poolToken with id {}', [poolTokenId])
     return
   }
-  let tokenAmountIn = tokenToDecimal(event.params.tokenAmountIn.toBigDecimal(), poolToken.decimals)
+  let tokenAmountIn = tokenToDecimal(
+    event.params.tokenAmountIn.toBigDecimal(),
+    poolToken.decimals
+  )
   let newAmount = poolToken.balance.plus(tokenAmountIn)
   poolToken.balance = newAmount
   poolToken.save()
@@ -247,27 +280,32 @@ export function handleJoinPool(event: LOG_JOIN): void {
 }
 
 export function handleExitPool(event: LOG_EXIT): void {
-  log.warning("NIK : Entering handleExitPool", [])
+  log.warning('NIK : Entering handleExitPool', [])
   let poolId = event.address.toHex()
 
   let address = event.params.tokenOut.toHex()
   let poolTokenId = poolId.concat('-').concat(address.toString())
   let poolToken = PoolToken.load(poolTokenId)
-  if (poolToken == null){
-    log.error("NIK LOGIC exiting pool : no poolToken with id {}", [poolTokenId])
-    log.critical("NIK LOGIC exiting pool : no poolToken with id {}", [poolTokenId])
+  if (poolToken == null) {
+    log.error('NIK LOGIC exiting pool : no poolToken with id {}', [poolTokenId])
+    log.critical('NIK LOGIC exiting pool : no poolToken with id {}', [
+      poolTokenId,
+    ])
     return
-  }else{
-    log.warning("NIK exiting pool : Found poolToken with id {}", [poolTokenId])
+  } else {
+    log.warning('NIK exiting pool : Found poolToken with id {}', [poolTokenId])
   }
 
-  let tokenAmountOut = tokenToDecimal(event.params.tokenAmountOut.toBigDecimal(), poolToken.decimals)
+  let tokenAmountOut = tokenToDecimal(
+    event.params.tokenAmountOut.toBigDecimal(),
+    poolToken.decimals
+  )
   let newAmount = poolToken.balance.minus(tokenAmountOut)
   poolToken.balance = newAmount
   poolToken.save()
 
-  let pool = Pool.load(poolId)!;
-  pool.exitsCount =pool.exitsCount.plus( BigInt.fromI32(1))
+  let pool = Pool.load(poolId)!
+  pool.exitsCount = pool.exitsCount.plus(BigInt.fromI32(1))
   if (newAmount.equals(ZERO_BD)) {
     decrPoolCount(pool.active, pool.finalized, pool.crp)
     pool.active = false
@@ -283,22 +321,31 @@ export function handleExitPool(event: LOG_EXIT): void {
  ************************************/
 
 export function handleSwap(event: LOG_SWAP): void {
-  log.warning("NIK Pool : Entering handleSwap ; Swapping the pool {}", [event.params.tokenIn.toHex()])
-
+  log.warning('NIK Pool : Entering handleSwap ; Swapping the pool {}', [
+    event.params.tokenIn.toHex(),
+  ])
+  log.warning('NIK SWAP {}, {}, {}', [
+    event.params.tokenAmountIn.toString(),
+    event.params.tokenAmountOut.toString(),
+    event.params.spread.toString(),
+  ])
   let poolId = event.address.toHex()
 
   let tokenIn = event.params.tokenIn.toHex()
   let poolTokenInId = poolId.concat('-').concat(tokenIn.toString())
   let poolTokenIn = PoolToken.load(poolTokenInId)
-  if (poolTokenIn ==null){
-    log.error("NIK LOGIC no poolToken for IN swap {}", [poolTokenInId])
-    log.critical("NIK LOGIC no poolToken for IN swap {}", [poolTokenInId])
+  if (poolTokenIn == null) {
+    log.error('NIK LOGIC no poolToken for IN swap {}', [poolTokenInId])
+    log.critical('NIK LOGIC no poolToken for IN swap {}', [poolTokenInId])
     return
-  }else{
-    log.warning("NIK Found poolToken for IN swap {}", [poolTokenInId])
+  } else {
+    log.warning('NIK Found poolToken for IN swap {}', [poolTokenInId])
   }
 
-  let tokenAmountIn = tokenToDecimal(event.params.tokenAmountIn.toBigDecimal(), poolTokenIn.decimals)
+  let tokenAmountIn = tokenToDecimal(
+    event.params.tokenAmountIn.toBigDecimal(),
+    poolTokenIn.decimals
+  )
   let newAmountIn = poolTokenIn.balance.plus(tokenAmountIn)
   poolTokenIn.balance = newAmountIn
   poolTokenIn.save()
@@ -306,28 +353,36 @@ export function handleSwap(event: LOG_SWAP): void {
   let tokenOut = event.params.tokenOut.toHex()
   let poolTokenOutId = poolId.concat('-').concat(tokenOut.toString())
   let poolTokenOut = PoolToken.load(poolTokenOutId)
-  if (poolTokenOut ==null){
-    log.error("NIK FATAL LOGIC no poolToken for OUT swap {}", [poolTokenOutId])
-    log.critical("NIK FATAL LOGIC no poolToken for OUT swap {}", [poolTokenOutId])
+  if (poolTokenOut == null) {
+    log.error('NIK FATAL LOGIC no poolToken for OUT swap {}', [poolTokenOutId])
+    log.critical('NIK FATAL LOGIC no poolToken for OUT swap {}', [
+      poolTokenOutId,
+    ])
     return
-  }else{
-    log.warning("NIK Found poolToken for OUT swap {}", [poolTokenOutId])
+  } else {
+    log.warning('NIK Found poolToken for OUT swap {}', [poolTokenOutId])
   }
 
-  let tokenAmountOut = tokenToDecimal(event.params.tokenAmountOut.toBigDecimal(), poolTokenOut.decimals)
+  let tokenAmountOut = tokenToDecimal(
+    event.params.tokenAmountOut.toBigDecimal(),
+    poolTokenOut.decimals
+  )
   let newAmountOut = poolTokenOut.balance.minus(tokenAmountOut)
   poolTokenOut.balance = newAmountOut
   poolTokenOut.save()
 
   updatePoolLiquidity(poolId)
 
-  let swapId = event.transaction.hash.toHexString().concat('-').concat(event.logIndex.toString())
+  let swapId = event.transaction.hash
+    .toHexString()
+    .concat('-')
+    .concat(event.logIndex.toString())
   let swap = Swap.load(swapId)
   if (swap == null) {
     swap = new Swap(swapId)
   }
 
-  let pool = Pool.load(poolId)!;
+  let pool = Pool.load(poolId)!
   let tokensList: Array<Bytes> = pool.tokensList
   let tokenOutPriceValue = ZERO_BD
   let tokenOutPrice = TokenPrice.load(tokenOut)
@@ -365,7 +420,6 @@ export function handleSwap(event: LOG_SWAP): void {
     totalSwapVolume = totalSwapVolume.plus(swapValue)
     totalSwapFee = totalSwapFee.plus(swapFeeValue)
 
-
     factory.totalSwapVolume = factory.totalSwapVolume.plus(swapValue)
     factory.totalSwapFee = factory.totalSwapFee.plus(swapFeeValue)
 
@@ -373,8 +427,8 @@ export function handleSwap(event: LOG_SWAP): void {
     pool.totalSwapFee = totalSwapFee
   }
 
-  pool.swapsCount =pool.swapsCount.plus( BigInt.fromI32(1))
-  factory.txCount =factory.txCount.plus( BigInt.fromI32(1))
+  pool.swapsCount = pool.swapsCount.plus(BigInt.fromI32(1))
+  factory.txCount = factory.txCount.plus(BigInt.fromI32(1))
   factory.save()
 
   if (newAmountIn.equals(ZERO_BD) || newAmountOut.equals(ZERO_BD)) {
@@ -407,71 +461,84 @@ export function handleSwap(event: LOG_SWAP): void {
  *********** POOL SHARES ************
  ************************************/
 
- export function handleTransfer(event: Transfer): void {
-  log.warning("NIK: entering handleTransfer", [])
+export function handleTransfer(event: Transfer): void {
+  log.warning('NIK: entering handleTransfer', [])
 
   let poolId = event.address.toHex()
 
   let ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 
-  let isMint = event.params.src.toHex() == ZERO_ADDRESS
-  let isBurn = event.params.dst.toHex() == ZERO_ADDRESS
+  let isMint = event.params.from.toHex() == ZERO_ADDRESS
+  let isBurn = event.params.to.toHex() == ZERO_ADDRESS
 
-  let poolShareFromId = poolId.concat('-').concat(event.params.src.toHex())
-  log.warning("NIK loading poolShareFrom {}", [poolShareFromId])
+  let poolShareFromId = poolId.concat('-').concat(event.params.from.toHex())
+  log.warning('NIK loading poolShareFrom {}', [poolShareFromId])
   let poolShareFrom = PoolShare.load(poolShareFromId)
-  let poolShareFromBalance = poolShareFrom == null ? ZERO_BD : poolShareFrom.balance
+  let poolShareFromBalance =
+    poolShareFrom == null ? ZERO_BD : poolShareFrom.balance
 
-  let poolShareToId = poolId.concat('-').concat(event.params.dst.toHex())
+  let poolShareToId = poolId.concat('-').concat(event.params.to.toHex())
   let poolShareTo = PoolShare.load(poolShareToId)
   let poolShareToBalance = poolShareTo == null ? ZERO_BD : poolShareTo.balance
 
-  let pool = Pool.load(poolId)!;
+  let pool = Pool.load(poolId)!
 
   if (isMint) {
     if (poolShareTo == null) {
-      createPoolShareEntity(poolShareToId, poolId, event.params.dst.toHex())
+      createPoolShareEntity(poolShareToId, poolId, event.params.to.toHex())
       poolShareTo = PoolShare.load(poolShareToId)!
     }
-    poolShareTo.balance =poolShareTo.balance.plus( tokenToDecimal(event.params.amt.toBigDecimal(), 18))
+    poolShareTo.balance = poolShareTo.balance.plus(
+      tokenToDecimal(event.params.value.toBigDecimal(), 18)
+    )
     poolShareTo.save()
-    pool.totalShares =pool.totalShares.plus( tokenToDecimal(event.params.amt.toBigDecimal(), 18))
+    pool.totalShares = pool.totalShares.plus(
+      tokenToDecimal(event.params.value.toBigDecimal(), 18)
+    )
   } else if (isBurn) {
     if (poolShareFrom == null) {
-    createPoolShareEntity(poolShareFromId, poolId, event.params.src.toHex())
-    poolShareFrom = PoolShare.load(poolShareFromId)!
-  }
-    poolShareFrom.balance = poolShareFrom.balance.minus(tokenToDecimal(event.params.amt.toBigDecimal(), 18))
+      createPoolShareEntity(poolShareFromId, poolId, event.params.from.toHex())
+      poolShareFrom = PoolShare.load(poolShareFromId)!
+    }
+    poolShareFrom.balance = poolShareFrom.balance.minus(
+      tokenToDecimal(event.params.value.toBigDecimal(), 18)
+    )
     poolShareFrom.save()
-    pool.totalShares = pool.totalShares.minus(tokenToDecimal(event.params.amt.toBigDecimal(), 18))
+    pool.totalShares = pool.totalShares.minus(
+      tokenToDecimal(event.params.value.toBigDecimal(), 18)
+    )
   } else {
     if (poolShareTo == null) {
-      createPoolShareEntity(poolShareToId, poolId, event.params.dst.toHex())
+      createPoolShareEntity(poolShareToId, poolId, event.params.to.toHex())
       poolShareTo = PoolShare.load(poolShareToId)!
     }
-    poolShareTo.balance =poolShareTo.balance.plus( tokenToDecimal(event.params.amt.toBigDecimal(), 18))
+    poolShareTo.balance = poolShareTo.balance.plus(
+      tokenToDecimal(event.params.value.toBigDecimal(), 18)
+    )
     poolShareTo.save()
 
     if (poolShareFrom == null) {
-      createPoolShareEntity(poolShareFromId, poolId, event.params.src.toHex())
+      createPoolShareEntity(poolShareFromId, poolId, event.params.from.toHex())
       poolShareFrom = PoolShare.load(poolShareFromId)!
     }
-    poolShareFrom.balance = poolShareFrom.balance.minus(tokenToDecimal(event.params.amt.toBigDecimal(), 18))
+    poolShareFrom.balance = poolShareFrom.balance.minus(
+      tokenToDecimal(event.params.value.toBigDecimal(), 18)
+    )
     poolShareFrom.save()
   }
 
   if (
-    poolShareTo !== null
-    && poolShareTo.balance.notEqual(ZERO_BD)
-    && poolShareToBalance.equals(ZERO_BD)
+    poolShareTo !== null &&
+    poolShareTo.balance.notEqual(ZERO_BD) &&
+    poolShareToBalance.equals(ZERO_BD)
   ) {
-    pool.holdersCount =pool.holdersCount.plus( BigInt.fromI32(1))
+    pool.holdersCount = pool.holdersCount.plus(BigInt.fromI32(1))
   }
 
   if (
-    poolShareFrom !== null
-    && poolShareFrom.balance.equals(ZERO_BD)
-    && poolShareFromBalance.notEqual(ZERO_BD)
+    poolShareFrom !== null &&
+    poolShareFrom.balance.equals(ZERO_BD) &&
+    poolShareFromBalance.notEqual(ZERO_BD)
   ) {
     pool.holdersCount = pool.holdersCount.minus(BigInt.fromI32(1))
   }
