@@ -5,6 +5,7 @@ import {
   Bytes,
   store,
   BigDecimal,
+  ethereum,
 } from '@graphprotocol/graph-ts'
 import {
   GulpCall,
@@ -35,13 +36,14 @@ import {
   PoolShare,
   PoolToken,
   Swap,
+  TimedFee,
   TokenPrice,
 } from '../../generated/schema'
 import {
   ConfigurableRightsPool,
   OwnershipTransferred,
 } from '../../generated/Factory/ConfigurableRightsPool'
-
+import { addSwap } from './swaps'
 /************************************
  ********** Pool Controls ***********
  ************************************/
@@ -330,6 +332,9 @@ export function handleSwap(event: LOG_SWAP): void {
   log.warning('NIK Pool : Entering handleSwap ; Swapping the pool {}', [
     event.params.tokenIn.toHex(),
   ])
+  // Examples:
+  // 1000000000000000000, 2371827655916274412506, 1196603348111024
+  // 19100000000000000, 254462854241953402, 2240015679752546
   log.warning('NIK SWAP {}, {}, {}', [
     event.params.tokenAmountIn.toString(),
     event.params.tokenAmountOut.toString(),
@@ -390,6 +395,16 @@ export function handleSwap(event: LOG_SWAP): void {
 
   let pool = Pool.load(poolId)!
   let tokensList: Array<Bytes> = pool.tokensList
+
+  const spread = event.params.spread
+    .toBigDecimal()
+    .div(BigDecimal.fromString('1e15'))
+  log.warning('NIK FEES spread is {}', [spread.toString()])
+  const tokenFees = tokenAmountIn.times(pool.swapFee.plus(spread))
+  log.warning('NIK FEES token fees are {}', [tokenFees.toString()])
+
+  // removed fees in multiple tokens
+
   let tokenOutPriceValue = ZERO_BD
   let tokenOutPrice = TokenPrice.load(tokenOut)
 
@@ -413,9 +428,6 @@ export function handleSwap(event: LOG_SWAP): void {
     }
   }
 
-  const spread = event.params.spread
-    .toBigDecimal()
-    .div(BigDecimal.fromString('1e15'))
   let totalSwapVolume = pool.totalSwapVolume
   let totalSwapFee = pool.totalSwapFee
   let liquidity = pool.liquidity
@@ -478,6 +490,7 @@ export function handleSwap(event: LOG_SWAP): void {
   swap.feeValue = swapFeeValue
   swap.timestamp = event.block.timestamp.toI32()
   swap.save()
+  addSwap(pool, swap, event)
 
   saveTransaction(event, 'swap')
 }

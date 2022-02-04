@@ -1,0 +1,50 @@
+const roundFees =[
+0 :  { total:0, today:[], yesterday:[]},
+1 :  { total:0, today:[], yesterday:[]},
+2 : { total:0, today:[], yesterday:[]},
+...
+
+22 : { total:0, today:[], yesterday:[]},
+23 : { total:0, today:[], yesterday:[]}
+]
+
+
+newValue = {
+	time,
+	spread,
+	fee
+}
+
+const position = now.getHour() % 24
+// exemple : 7
+const limit = now - 24h
+addValue(newValue, position)
+
+total = sum(8->23)+ sum(0->8) + tri(7, limit)
+
+return total
+
+
+addValue = (val, position)=>{
+	line = roundFees[position]
+	i =0
+	first = line[0]
+
+	if (first.time < limit){
+
+		roundFees[position].yesterday=roundFees[position].today
+		roundFees[position].today=[]
+		roundFees[position].total=undefined
+	}
+
+	roundFees[position].today.push(val)
+}
+
+
+tri = (position, limit) => {
+	sumYesterday = sum(roundFees[position].yesterday filter ater limit map fee)
+	sumToday = sum(roundFees[position].today)
+	const total =sumYesterday+sumToday
+	roundFees[position].total = total
+	return total
+}
