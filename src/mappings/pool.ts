@@ -1,5 +1,11 @@
 /// <reference path="../../node_modules/assemblyscript/index.d.ts" />
-import { BigInt, Address, Bytes, store } from '@graphprotocol/graph-ts'
+import {
+  BigInt,
+  Address,
+  Bytes,
+  store,
+  BigDecimal,
+} from '@graphprotocol/graph-ts'
 import {
   GulpCall,
   LOG_CALL,
@@ -407,6 +413,7 @@ export function handleSwap(event: LOG_SWAP): void {
     }
   }
 
+  const spread = event.params.spread.toBigDecimal()
   let totalSwapVolume = pool.totalSwapVolume
   let totalSwapFee = pool.totalSwapFee
   let liquidity = pool.liquidity
@@ -415,8 +422,16 @@ export function handleSwap(event: LOG_SWAP): void {
   let factory = Balancer.load('1')!
 
   if (tokenOutPriceValue.gt(ZERO_BD)) {
+    log.warning('NIK SPREAD : Has price && spread = {} with tokens {} - {}', [
+      spread.toString(),
+      poolTokenIn.symbol!,
+      poolTokenOut.symbol!,
+    ])
+
     swapValue = tokenOutPriceValue.times(tokenAmountOut)
-    swapFeeValue = swapValue.times(pool.swapFee)
+    // without spread : swapFeeValue = swapValue.times(pool.swapFee)
+    // fees = swapValue * (spread+fee)
+    swapFeeValue = swapValue.times(pool.swapFee.plus(spread))
     totalSwapVolume = totalSwapVolume.plus(swapValue)
     totalSwapFee = totalSwapFee.plus(swapFeeValue)
 
@@ -425,6 +440,11 @@ export function handleSwap(event: LOG_SWAP): void {
 
     pool.totalSwapVolume = totalSwapVolume
     pool.totalSwapFee = totalSwapFee
+  } else {
+    log.warning('NIK SPREAD : Has no price with tokens {} - {}', [
+      poolTokenIn.symbol!,
+      poolTokenOut.symbol!,
+    ])
   }
 
   pool.swapsCount = pool.swapsCount.plus(BigInt.fromI32(1))
@@ -441,6 +461,9 @@ export function handleSwap(event: LOG_SWAP): void {
   swap.tokenIn = event.params.tokenIn
   swap.tokenInSym = poolTokenIn.symbol!
   swap.tokenOut = event.params.tokenOut
+  swap.spread = event.params.spread
+    .toBigDecimal()
+    .div(BigDecimal.fromString('1e15'))
   swap.tokenOutSym = poolTokenOut.symbol!
   swap.tokenAmountIn = tokenAmountIn
   swap.tokenAmountOut = tokenAmountOut
