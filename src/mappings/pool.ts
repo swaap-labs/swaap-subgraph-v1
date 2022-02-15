@@ -413,7 +413,9 @@ export function handleSwap(event: LOG_SWAP): void {
     }
   }
 
-  const spread = event.params.spread.toBigDecimal()
+  const spread = event.params.spread
+    .toBigDecimal()
+    .div(BigDecimal.fromString('1e15'))
   let totalSwapVolume = pool.totalSwapVolume
   let totalSwapFee = pool.totalSwapFee
   let liquidity = pool.liquidity
@@ -431,7 +433,9 @@ export function handleSwap(event: LOG_SWAP): void {
     swapValue = tokenOutPriceValue.times(tokenAmountOut)
     // without spread : swapFeeValue = swapValue.times(pool.swapFee)
     // fees = swapValue * (spread+fee)
-    swapFeeValue = swapValue.times(pool.swapFee.plus(spread))
+    swapFeeValue = swapValue
+      .times(pool.swapFee.plus(spread))
+      .div(BigDecimal.fromString('100'))
     totalSwapVolume = totalSwapVolume.plus(swapValue)
     totalSwapFee = totalSwapFee.plus(swapFeeValue)
 
@@ -441,7 +445,7 @@ export function handleSwap(event: LOG_SWAP): void {
     pool.totalSwapVolume = totalSwapVolume
     pool.totalSwapFee = totalSwapFee
   } else {
-    log.warning('NIK SPREAD : Has no price with tokens {} - {}', [
+    log.error('NIK SPREAD : Has no price with tokens {} - {}', [
       poolTokenIn.symbol!,
       poolTokenOut.symbol!,
     ])
@@ -461,9 +465,7 @@ export function handleSwap(event: LOG_SWAP): void {
   swap.tokenIn = event.params.tokenIn
   swap.tokenInSym = poolTokenIn.symbol!
   swap.tokenOut = event.params.tokenOut
-  swap.spread = event.params.spread
-    .toBigDecimal()
-    .div(BigDecimal.fromString('1e15'))
+  swap.spread = spread
   swap.tokenOutSym = poolTokenOut.symbol!
   swap.tokenAmountIn = tokenAmountIn
   swap.tokenAmountOut = tokenAmountOut
