@@ -124,16 +124,6 @@ enum SwapType {
 }
 
 
-
-type TimedFee @entity{
-    id: ID!
-    time:BigInt!
-    tokenIn: String!
-    tokenFees: BigDecimal!
-    poolAddress: Pool!
-}
-
-
 type RoundFees @entity{
     id: ID!
     poolAddress: Pool!

@@ -1,4 +1,4 @@
-import { ethereum, log, BigDecimal } from '@graphprotocol/graph-ts'
+import { ethereum, log, BigDecimal, BigInt } from '@graphprotocol/graph-ts'
 import { DAY, generateId, getNow, MINUTE } from './constants'
 import { Pool, RoundFees, Swap } from '../../generated/schema'
 import { Timestamp } from '../types/business'
@@ -7,9 +7,9 @@ import { LOG_SWAP } from '../../generated/templates/Pool/Pool'
 //log.warning('NIK SWAP starting', [])
 
 // Add pool.roundFees
+const cache: i32 = 240 * MINUTE
 
 export function initSwaps(pool: Pool, event: ethereum.Event): void {
-  const cache: i32 = 2 * MINUTE
   const now = getNow(event)
 
   const roundFees = new RoundFees(generateId(event))
@@ -28,19 +28,26 @@ export function addSwap(pool: Pool, swap: Swap, event: LOG_SWAP): void {
   const now = swap.timestamp
   const limit = now - DAY
   if (!pool.roundFees) {
-    log.error('NIK SWAP : No association of roundfees for pool {}', [pool.id])
-    log.critical('No roundfees association', [])
+    log.error('ADD SWAP : No association of roundfees for pool {}', [pool.id])
+    log.critical('ADD SWAP No roundfees association', [])
   }
   const roundFees = RoundFees.load(pool.roundFees!)!
   if (roundFees === null) {
-    log.error('NIK SWAP : unable to load roundfees {}', [pool.roundFees!])
-    log.critical('No roundfees saved with id {}', [pool.roundFees!])
+    log.error('ADD SWAP : unable to load roundfees {}', [pool.roundFees!])
+    log.critical('ADD SWAP : No roundfees saved with id {}', [pool.roundFees!])
   }
+
   add(swap, roundFees, limit)
-  const calculus = calculate(roundFees, limit)
-  roundFees.dailyVolume = calculus[0]
-  roundFees.dailyFees = calculus[1]
-  roundFees.save()
+
+  if (now > roundFees.last + cache) {
+    const calculus = calculate(roundFees, limit)
+
+    roundFees.dailyVolume = calculus[0]
+    roundFees.dailyFees = calculus[1]
+    roundFees.last = now
+
+    roundFees.save()
+  }
 }
 
 function add(swap: Swap, roundFees: RoundFees, limit: Timestamp): void {
@@ -48,26 +55,23 @@ function add(swap: Swap, roundFees: RoundFees, limit: Timestamp): void {
   let yesterday = roundFees.yesterday
   if (today.length > 0) {
     const firstId = today[0]
+
     const first = Swap.load(firstId)!
     if (first.timestamp < limit) {
+      const t: i64 = BigInt.fromString(
+        (swap.timestamp * 1000).toString()
+      ).toI64()
+      const day = new Date(t).toISOString()
+      log.info('SWAP switching day {}', [day])
+
       yesterday = today
       today = []
       roundFees.dailyVolume = BigDecimal.zero() // will be updated
       roundFees.dailyFees = BigDecimal.zero() // will be updated
-      log.warning('NIK SWAP : new day : first ({}) -> now ({})', [
-        first.timestamp.toString(),
-        swap.timestamp.toString(),
-      ])
     }
-  } else {
-    log.warning('NIK BUG No data for today', [])
   }
-
-  log.warning('NIK BUG pushing', [])
-
   today.push(swap.id)
-  log.warning('NIK BUG pushed with length {}', [today.length.toString()])
-  log.warning('NIK BUG first item {}', [today[0]])
+
   roundFees.today = today
   roundFees.yesterday = yesterday
 
@@ -80,9 +84,6 @@ function calculate(roundFees: RoundFees, limit: Timestamp): BigDecimal[] {
   let sumFeesToday = BigDecimal.zero()
   let sumVolumeToday = BigDecimal.zero()
   let swapCount = 0
-  log.warning('NIK BUG calculate with length {}', [
-    roundFees.today.length.toString(),
-  ])
 
   // Swaps from yesterday not older than 24h
   for (let i = 0; i < roundFees.yesterday.length; i++) {
@@ -102,6 +103,7 @@ function calculate(roundFees: RoundFees, limit: Timestamp): BigDecimal[] {
   for (let i = 0; i < roundFees.today.length; i++) {
     const currentId = roundFees.today[i]
     const current = Swap.load(currentId)!
+
     sumFeesToday = sumFeesToday.plus(current.feeValue)
     sumVolumeToday = sumVolumeToday.plus(current.value)
     swapCount++
@@ -109,8 +111,7 @@ function calculate(roundFees: RoundFees, limit: Timestamp): BigDecimal[] {
 
   const volume = sumVolumeToday.plus(sumVolumeYesterday)
   const fees = sumFeesToday.plus(sumFeesYesterday)
-
-  log.warning('NIK BUG calculated volume {} and fees {} for swaps count {}', [
+  log.warning('NIK SWAP Has calculated {} {} {}', [
     volume.toString(),
     fees.toString(),
     swapCount.toString(),
