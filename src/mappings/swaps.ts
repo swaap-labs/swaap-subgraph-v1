@@ -7,7 +7,7 @@ import { LOG_SWAP } from '../../generated/templates/Pool/Pool'
 //log.warning('NIK SWAP starting', [])
 
 // Add pool.roundFees
-const cache: i32 = 240 * MINUTE
+const cache: i32 = 10 * MINUTE
 
 export function initSwaps(pool: Pool, event: ethereum.Event): void {
   const now = getNow(event)
@@ -16,8 +16,12 @@ export function initSwaps(pool: Pool, event: ethereum.Event): void {
   roundFees.poolAddress = pool.id
   roundFees.dailyFees = BigDecimal.zero()
   roundFees.dailyVolume = BigDecimal.zero()
-  roundFees.yesterday = []
-  roundFees.today = []
+  roundFees.yesterdayTimestamps = []
+  roundFees.yesterdayFees = []
+  roundFees.yesterdayVolumes = []
+  roundFees.todayTimestamps = []
+  roundFees.todayFees = []
+  roundFees.todayVolumes = []
   roundFees.last = now - cache
   roundFees.save()
   pool.roundFees = roundFees.id
@@ -51,29 +55,46 @@ export function addSwap(pool: Pool, swap: Swap, event: LOG_SWAP): void {
 }
 
 function add(swap: Swap, roundFees: RoundFees, limit: Timestamp): void {
-  let today = roundFees.today
-  let yesterday = roundFees.yesterday
-  if (today.length > 0) {
-    const firstId = today[0]
+  let yesterdayTimestamps = roundFees.yesterdayTimestamps
+  let yesterdayFees = roundFees.yesterdayFees
+  let yesterdayVolumes = roundFees.yesterdayVolumes
+  let todayTimestamps = roundFees.todayTimestamps
+  let todayFees = roundFees.todayFees
+  let todayVolumes = roundFees.todayVolumes
 
-    const first = Swap.load(firstId)!
-    if (first.timestamp < limit) {
+  if (todayTimestamps.length > 0) {
+    const firstTimestamp = todayTimestamps[0]
+
+    if (firstTimestamp < limit) {
       const t: i64 = BigInt.fromString(
         (swap.timestamp * 1000).toString()
       ).toI64()
       const day = new Date(t).toISOString()
       log.info('SWAP switching day {}', [day])
 
-      yesterday = today
-      today = []
+      yesterdayTimestamps = todayTimestamps
+      todayTimestamps = []
+      yesterdayFees = todayFees
+      todayFees = []
+      yesterdayVolumes = todayVolumes
+      todayVolumes = []
+
       roundFees.dailyVolume = BigDecimal.zero() // will be updated
       roundFees.dailyFees = BigDecimal.zero() // will be updated
+      roundFees.swapCount = 0
     }
   }
-  today.push(swap.id)
+  todayTimestamps.push(swap.timestamp)
+  todayVolumes.push(swap.value)
+  todayFees.push(swap.feeValue)
 
-  roundFees.today = today
-  roundFees.yesterday = yesterday
+  roundFees.yesterdayTimestamps = yesterdayTimestamps
+  roundFees.yesterdayVolumes = yesterdayVolumes
+  roundFees.yesterdayFees = yesterdayFees
+  roundFees.todayTimestamps = todayTimestamps
+  roundFees.todayVolumes = todayVolumes
+  roundFees.todayFees = todayFees
+  roundFees.swapCount = roundFees.swapCount + 1
 
   roundFees.save()
 }
@@ -86,26 +107,26 @@ function calculate(roundFees: RoundFees, limit: Timestamp): BigDecimal[] {
   let swapCount = 0
 
   // Swaps from yesterday not older than 24h
-  for (let i = 0; i < roundFees.yesterday.length; i++) {
-    const currentId = roundFees.yesterday[i]
+  for (let i = 0; i < roundFees.yesterdayTimestamps.length; i++) {
+    const timestamp = roundFees.yesterdayTimestamps[i]
+    const volume = roundFees.yesterdayVolumes[i]
+    const fee = roundFees.yesterdayFees[i]
 
-    const current = Swap.load(currentId)!
-
-    if (current.timestamp > limit) {
-      sumFeesYesterday = sumFeesYesterday.plus(current.feeValue)
-      sumVolumeYesterday = sumVolumeYesterday.plus(current.value)
+    if (timestamp > limit) {
+      sumVolumeYesterday = sumVolumeYesterday.plus(volume)
+      sumFeesYesterday = sumFeesYesterday.plus(fee)
       swapCount++
     }
   }
 
   // Swaps from today
 
-  for (let i = 0; i < roundFees.today.length; i++) {
-    const currentId = roundFees.today[i]
-    const current = Swap.load(currentId)!
+  for (let i = 0; i < roundFees.todayTimestamps.length; i++) {
+    const volume = roundFees.todayVolumes[i]
+    const fee = roundFees.todayFees[i]
 
-    sumFeesToday = sumFeesToday.plus(current.feeValue)
-    sumVolumeToday = sumVolumeToday.plus(current.value)
+    sumVolumeToday = sumVolumeToday.plus(volume)
+    sumFeesToday = sumFeesToday.plus(fee)
     swapCount++
   }
 

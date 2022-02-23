@@ -451,7 +451,7 @@ export function handleSwap(event: LOG_SWAP): void {
   swap.feeValue = swapFeeValue
   swap.timestamp = event.block.timestamp.toI32()
 
-  swap.save()
+  //swap.save()
   addSwap(pool, swap, event)
 
   saveTransaction(event, 'swap')

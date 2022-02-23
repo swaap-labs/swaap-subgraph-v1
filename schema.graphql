@@ -129,7 +129,12 @@ type RoundFees @entity{
     poolAddress: Pool!
     dailyFees: BigDecimal!
     dailyVolume: BigDecimal!
-    today: [String!]!
-    yesterday: [String!]!
+    swapCount:Int!
+    todayTimestamps: [Int!]!
+    todayFees: [BigDecimal!]!
+    todayVolumes: [BigDecimal!]!
+    yesterdayTimestamps: [Int!]!
+    yesterdayFees: [BigDecimal!]!
+    yesterdayVolumes: [BigDecimal!]!
     last: Int!
 }
