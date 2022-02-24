@@ -132,7 +132,7 @@ function calculate(roundFees: RoundFees, limit: Timestamp): BigDecimal[] {
 
   const volume = sumVolumeToday.plus(sumVolumeYesterday)
   const fees = sumFeesToday.plus(sumFeesYesterday)
-  log.warning('NIK SWAP Has calculated {} {} {}', [
+  log.debug('NIK SWAP Has calculated {} {} {}', [
     volume.toString(),
     fees.toString(),
     swapCount.toString(),

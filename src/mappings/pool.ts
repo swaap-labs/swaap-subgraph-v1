@@ -368,7 +368,7 @@ export function handleSwap(event: LOG_SWAP): void {
 
   const spread = event.params.spread
     .toBigDecimal()
-    .div(BigDecimal.fromString('1e15'))
+    .div(BigDecimal.fromString('1e18'))
 
   // removed fees in multiple tokens
 
@@ -408,7 +408,6 @@ export function handleSwap(event: LOG_SWAP): void {
     // fees = swapValue * (spread+fee)
     swapFeeValue = swapValue
       .times(pool.swapFee.plus(spread))
-      .div(BigDecimal.fromString('100'))
     totalSwapVolume = totalSwapVolume.plus(swapValue)
     totalSwapFee = totalSwapFee.plus(swapFeeValue)
 
