@@ -41,6 +41,8 @@ type Pool @entity {
     factoryID: Balancer!
     tx: Bytes                                           # Pool creation transaction id
     swaps: [Swap!] @derivedFrom(field: "poolAddress")
+    roundFees: RoundFees
+
 }
 
 type PoolToken @entity {
@@ -121,7 +123,18 @@ enum SwapType {
     exitswapExternAmountOut
 }
 
-type CounterLaab @entity {
+
+type RoundFees @entity{
     id: ID!
-    count: BigInt!
+    poolAddress: Pool!
+    dailyFees: BigDecimal!
+    dailyVolume: BigDecimal!
+    swapCount:Int!
+    todayTimestamps: [Int!]!
+    todayFees: [BigDecimal!]!
+    todayVolumes: [BigDecimal!]!
+    yesterdayTimestamps: [Int!]!
+    yesterdayFees: [BigDecimal!]!
+    yesterdayVolumes: [BigDecimal!]!
+    last: Int!
 }

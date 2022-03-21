@@ -1,5 +1,5 @@
 import { Address, BigInt, BigDecimal } from '@graphprotocol/graph-ts'
-import {log} from "@graphprotocol/graph-ts/"
+import { log } from '@graphprotocol/graph-ts/'
 import {
   ZERO_BD,
   isCrp,
@@ -7,23 +7,23 @@ import {
   getCrpSymbol,
   getCrpName,
   getCrpRights,
-  getCrpCap
+  getCrpCap,
 } from './helpers'
-import {Balancer, Pool} from '../../generated/schema'
-import {LOG_NEW_POOL} from '../../generated/Factory/Factory'
-import {ConfigurableRightsPool} from '../../generated/Factory/ConfigurableRightsPool'
-import {CrpControllerContract, PoolContract} from '../types/templates'
+import { Balancer, Pool } from '../../generated/schema'
+import { LOG_NEW_POOL } from '../../generated/Factory/Factory'
+import { ConfigurableRightsPool } from '../../generated/Factory/ConfigurableRightsPool'
+import { CrpControllerContract, PoolContract } from '../types/templates'
+import { INITIAL_SWAP_FEES } from './constants'
+import {initSwaps} from "./swaps";
 
-
-log.warning ("NIK PRICE starting", []);
 
 export function handleNewPool(event: LOG_NEW_POOL): void {
-  log.info("NIK: 13 entering handleNewPool -> {} ;", [event.params.pool.toHexString()]);
+
   let factory = Balancer.load('1')
 
   // if no factory yet, set up blank initial
   if (factory == null) {
-    log.warning("NIK: weird, no factory saved yet... ", []);
+    log.warning('FACTORY: No factory saved yet... ', [])
 
     factory = new Balancer('1')
     factory.color = 'Bronze'
@@ -55,7 +55,7 @@ export function handleNewPool(event: LOG_NEW_POOL): void {
   pool.publicSwap = false
   pool.finalized = false
   pool.active = true
-  pool.swapFee = BigDecimal.fromString('0.000001')
+  pool.swapFee = BigDecimal.fromString(INITIAL_SWAP_FEES)
   pool.totalWeight = ZERO_BD
   pool.totalShares = ZERO_BD
   pool.totalSwapVolume = ZERO_BD
@@ -71,13 +71,14 @@ export function handleNewPool(event: LOG_NEW_POOL): void {
   pool.tokensList = []
   pool.tx = event.transaction.hash
   pool.save()
-  log.info("NIK: new pool saved", []);
+  log.info('FACTORY: new pool saved', [])
 
+  // Link to roundFees
+  initSwaps(pool, event)
 
   factory.poolCount = factory.poolCount + 1
   factory.save()
 
   // TODO NZ: Understand what is the need
   PoolContract._create(event.params.pool)
-  log.info("NIK: exiting handleNewPool", []);
 }
