@@ -8,9 +8,9 @@ dataSources:
     name: Factory
     network: rinkeby
     source:
-      address: "0x0BcB18345850A57BBa2b474f19f8E4d2FEDEFF6B"
+      address: "0xf1106d3ad973dae47a0bc03eae5811365ac8b28b"
       abi: Factory
-      startBlock: 10490984
+      startBlock: 10651746
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.5
@@ -65,12 +65,12 @@ templates:
           handler: handleFinalize
         - event: LOG_CALL(indexed bytes4,indexed address,bytes)
           topic0: "0x86d4606200000000000000000000000000000000000000000000000000000000"
-          handler: handleRebind #bindMMM(address,uint256,uint256,address)
-        - event: LOG_CALL(indexed bytes4,indexed address,bytes)
-          topic0: "0x0180be9000000000000000000000000000000000000000000000000000000000"
-          handler: handleRebind #rebindMMM(address,uint256,uint256,address)
+          handler: handleRebind #bindMMM(address,uint256,uint80,address)
         - event: LOG_CALL(indexed bytes4,indexed address,bytes)
           topic0: "0xab323b4900000000000000000000000000000000000000000000000000000000"
+          handler: handleRebind #rebindMMM(address,uint256,uint80,address)
+        - event: LOG_CALL(indexed bytes4,indexed address,bytes)
+          topic0: "0xc343517100000000000000000000000000000000000000000000000000000000"
           handler: handleUnbind
         - event: LOG_JOIN(indexed address,indexed address,uint256)
           handler: handleJoinPool
