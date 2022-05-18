@@ -12,7 +12,9 @@ import {
   LOG_EXIT,
   LOG_JOIN,
   LOG_SWAP,
-  Pool as BPool,
+  LOG_NEW_CONTROLLER,
+  LOG_NEW_ORACLE_STATE,
+  Pool as SPool,
   Transfer,
 } from '../../generated/templates/Pool/Pool'
 import { log } from '@graphprotocol/graph-ts/'
@@ -24,18 +26,20 @@ import {
   createPoolShareEntity,
   createPoolTokenEntity,
   updatePoolLiquidity,
+  createPoolOracleStateEntity,
   getCrpUnderlyingPool,
   saveTransaction,
   ZERO_BD,
   decrPoolCount,
 } from './helpers'
 import {
-  Balancer,
+  SwaapProtocol,
   Pool,
   PoolShare,
   PoolToken,
   Swap,
   TokenPrice,
+  PoolOracleState
 } from '../../generated/schema'
 import {
   ConfigurableRightsPool,
@@ -67,11 +71,11 @@ export function handleSetSwapFee(event: LOG_CALL): void {
   saveTransaction(event, 'setSwapFee')
 }
 
-export function handleSetController(event: LOG_CALL): void {
+export function handleSetController(event: LOG_NEW_CONTROLLER): void {
   let poolId = event.address.toHex()
   let pool = Pool.load(poolId)!
   let controller = Address.fromString(
-    event.params.data.toHexString().slice(-40)
+    event.params.to.toHexString()
   )
   pool.controller = controller
   pool.save()
@@ -106,7 +110,7 @@ export function handleFinalize(event: LOG_CALL): void {
   let pool = Pool.load(poolId)!
   // let balance = BigDecimal.fromString('100')
   pool.finalized = true
-  pool.symbol = 'BPT'
+  pool.symbol = 'SPT'
   pool.publicSwap = true
   // pool.totalShares = balance
   pool.save()
@@ -123,10 +127,40 @@ export function handleFinalize(event: LOG_CALL): void {
   poolShare.save()
   */
 
-  let factory = Balancer.load('1')!
+  let factory = SwaapProtocol.load('1')!
   factory.finalizedPoolCount = factory.finalizedPoolCount + 1
   factory.save()
   saveTransaction(event, 'finalize')
+}
+
+// LOG_NEW_ORACLE_STATE is fired by the bindMMM and rebindMMM functions
+export function handleNewOracleState(event: LOG_NEW_ORACLE_STATE): void {
+  let poolId = event.address.toHex()
+  let pool = Pool.load(poolId)!
+  let tokenAddress = event.params.token.toHexString()
+  let oracleAddress = event.params.oracle.toHexString()
+  let price = event.params.price
+  let decimals = event.params.decimals
+  let description = event.params.description.toString()
+
+  let poolOracleStateId = poolId.concat('-').concat(tokenAddress)
+  let poolOracleInitialState = PoolOracleState.load(poolOracleStateId)
+  if (poolOracleInitialState == null) {
+    log.info('PoolOracleInitialState is null, creating it {}', [poolOracleStateId])
+    createPoolOracleStateEntity(poolOracleStateId, oracleAddress, description, price, decimals)
+  } else {
+  	poolOracleInitialState.oracle = oracleAddress // should be the same value
+  	poolOracleInitialState.description = description
+  	poolOracleInitialState.fixedPointPrice = price
+  	poolOracleInitialState.decimals = decimals
+  	poolOracleInitialState.save()
+  }
+
+  let priceBigInt = new BigDecimal(price);
+  createTokenPrice(poolId, tokenAddress, priceBigInt)
+
+  updatePoolLiquidity(poolId)
+  saveTransaction(event, 'newOracleState')
 }
 
 export function handleRebind(event: LOG_CALL): void {
@@ -146,7 +180,7 @@ export function handleRebind(event: LOG_CALL): void {
     event.params.data.toHexString().slice(34, 74)
   )
   let denormWeight = hexToDecimal(
-    event.params.data.toHexString().slice(138),
+    event.params.data.toHexString().slice(138, 202),
     18
   )
 
@@ -184,7 +218,7 @@ export function handleRebind(event: LOG_CALL): void {
   }
   pool.save()
 
-  updatePoolLiquidity(poolId)
+//   updatePoolLiquidity(poolId) --> triggered in handleNewOracleState
   saveTransaction(event, 'rebind')
 }
 
@@ -206,20 +240,21 @@ export function handleUnbind(event: LOG_CALL): void {
   pool.totalWeight = pool.totalWeight.minus(poolToken.denormWeight)
   pool.save()
   store.remove('PoolToken', poolTokenId)
+  store.remove('PoolOracleState', poolTokenId)
 
   updatePoolLiquidity(poolId)
   saveTransaction(event, 'unbind')
 }
 
 export function handleGulp(call: GulpCall): void {
-  log.warning('GULP : Entering handleGulp', [])
+  log.warning('GULP: Entering handleGulp', [])
   let poolId = call.to.toHexString()
   let pool = Pool.load(poolId)!
 
   let address = call.inputs.token.toHexString()
 
-  let bpool = BPool.bind(Address.fromString(poolId))
-  let balanceCall = bpool.try_getBalance(Address.fromString(address))
+  let spool = SPool.bind(Address.fromString(poolId))
+  let balanceCall = spool.try_getBalance(Address.fromString(address))
 
   let poolTokenId = poolId.concat('-').concat(address)
   let poolToken = PoolToken.load(poolTokenId)!
@@ -352,6 +387,18 @@ export function handleSwap(event: LOG_SWAP): void {
   poolTokenOut.balance = newAmountOut
   poolTokenOut.save()
 
+  // update tokenIn and tokenOut prices
+  // TODO: only if whitelisted?
+  let tokenInPriceValue = ZERO_BD
+  if (true) {
+	updateTokenPrice(poolId, tokenOut, event.params.priceOut.toBigDecimal())
+	let tokenInPrice = updateTokenPrice(poolId, tokenIn, event.params.priceIn.toBigDecimal())
+    if (tokenInPrice == null) {
+      return
+  	}
+	tokenInPriceValue = tokenInPrice.price
+  }
+
   updatePoolLiquidity(poolId)
 
   let swapId = event.transaction.hash
@@ -364,64 +411,23 @@ export function handleSwap(event: LOG_SWAP): void {
   }
 
   let pool = Pool.load(poolId)!
-  let tokensList: Array<Bytes> = pool.tokensList
 
-  const spread = event.params.spread
-    .toBigDecimal()
-    .div(BigDecimal.fromString('1e18'))
+  const spread = tokenToDecimal(event.params.spread.toBigDecimal(), 18)
+  const taxBaseIn = tokenToDecimal(event.params.taxBaseIn.toBigDecimal(), 18)
 
-  // removed fees in multiple tokens
+  let factory = SwaapProtocol.load('1')!
 
-  let tokenOutPriceValue = ZERO_BD
-  let tokenOutPrice = TokenPrice.load(tokenOut)
+  let swapValue = tokenInPriceValue.times(tokenAmountIn)
+  let swapFeeValue = swapValue.times(pool.swapFee)
+  	.plus(tokenInPriceValue.times(taxBaseIn).times(spread))
+  let totalSwapVolume = pool.totalSwapVolume.plus(swapValue)
+  let totalSwapFee = pool.totalSwapFee.plus(swapFeeValue)
 
-  if (tokenOutPrice != null) {
-    tokenOutPriceValue = tokenOutPrice.price
-  } else {
-    for (let i: i32 = 0; i < tokensList.length; i++) {
-      let tokenPriceId = tokensList[i].toHexString()
-      if (!tokenOutPriceValue.gt(ZERO_BD) && tokenPriceId !== tokenOut) {
-        let tokenPrice = TokenPrice.load(tokenPriceId)
-        if (tokenPrice !== null && tokenPrice.price.gt(ZERO_BD)) {
-          let poolTokenId = poolId.concat('-').concat(tokenPriceId)
-          let poolToken = PoolToken.load(poolTokenId)!
-          tokenOutPriceValue = tokenPrice.price
-            .times(poolToken.balance)
-            .div(poolToken.denormWeight)
-            .times(poolTokenOut.denormWeight)
-            .div(poolTokenOut.balance)
-        }
-      }
-    }
-  }
+  factory.totalSwapVolume = factory.totalSwapVolume.plus(swapValue)
+  factory.totalSwapFee = factory.totalSwapFee.plus(swapFeeValue)
 
-  let totalSwapVolume = pool.totalSwapVolume
-  let totalSwapFee = pool.totalSwapFee
-  let liquidity = pool.liquidity
-  let swapValue = ZERO_BD
-  let swapFeeValue = ZERO_BD
-  let factory = Balancer.load('1')!
-
-  if (tokenOutPriceValue.gt(ZERO_BD)) {
-    swapValue = tokenOutPriceValue.times(tokenAmountOut)
-    // without spread : swapFeeValue = swapValue.times(pool.swapFee)
-    // fees = swapValue * (spread+fee)
-    swapFeeValue = swapValue
-      .times(pool.swapFee.plus(spread))
-    totalSwapVolume = totalSwapVolume.plus(swapValue)
-    totalSwapFee = totalSwapFee.plus(swapFeeValue)
-
-    factory.totalSwapVolume = factory.totalSwapVolume.plus(swapValue)
-    factory.totalSwapFee = factory.totalSwapFee.plus(swapFeeValue)
-
-    pool.totalSwapVolume = totalSwapVolume
-    pool.totalSwapFee = totalSwapFee
-  } else {
-    log.error('SPREAD : Has no price with tokens {} - {}', [
-      poolTokenIn.symbol!,
-      poolTokenOut.symbol!,
-    ])
-  }
+  pool.totalSwapVolume = totalSwapVolume
+  pool.totalSwapFee = totalSwapFee
 
   pool.swapsCount = pool.swapsCount.plus(BigInt.fromI32(1))
   factory.txCount = factory.txCount.plus(BigInt.fromI32(1))
@@ -438,6 +444,7 @@ export function handleSwap(event: LOG_SWAP): void {
   swap.tokenInSym = poolTokenIn.symbol!
   swap.tokenOut = event.params.tokenOut
   swap.spread = spread
+  swap.taxBaseIn = taxBaseIn
   swap.tokenOutSym = poolTokenOut.symbol!
   swap.tokenAmountIn = tokenAmountIn
   swap.tokenAmountOut = tokenAmountOut
@@ -445,16 +452,81 @@ export function handleSwap(event: LOG_SWAP): void {
   swap.userAddress = event.transaction.from.toHex()
   swap.poolTotalSwapVolume = totalSwapVolume
   swap.poolTotalSwapFee = totalSwapFee
-  swap.poolLiquidity = liquidity
+  swap.poolLiquidity = pool.liquidity
   swap.value = swapValue
   swap.feeValue = swapFeeValue
   swap.timestamp = event.block.timestamp.toI32()
 
-  //swap.save()
+  swap.save()
   addSwap(pool, swap, event)
 
   saveTransaction(event, 'swap')
 }
+
+function updateTokenPrice(poolId: string, token: string, unscaledPrice: BigDecimal): TokenPrice | null {
+  let poolOracleStateId = poolId.concat('-').concat(token)
+  let poolOracleInitialState = PoolOracleState.load(poolOracleStateId)
+  if (poolOracleInitialState == null) {
+    log.error('LOGIC updateTokenPrice no PoolOracleState for {}', [poolOracleStateId])
+    log.critical('LOGIC updateTokenPrice no PoolOracleState for {}', [
+      poolOracleStateId,
+    ])
+    return null
+  }
+  let tokenPriceId = token.concat('-').concat(poolOracleInitialState.oracle)
+  let tokenPrice = TokenPrice.load(tokenPriceId)
+  if (tokenPrice == null) {
+    log.error('LOGIC updateTokenPrice no TokenPrice for {}', [tokenPriceId])
+    log.critical('LOGIC updateTokenPrice no TokenPrice for {}', [
+      tokenPriceId,
+    ])
+    return null
+  }
+  let newTokenInPriceValue = tokenToDecimal(
+	unscaledPrice,
+	poolOracleInitialState.decimals
+  )
+  tokenPrice.price = newTokenInPriceValue
+  tokenPrice.save()
+  return tokenPrice
+}
+
+function createTokenPrice(poolId: string, token: string, unscaledPrice: BigDecimal): void {
+  let poolOracleStateId = poolId.concat('-').concat(token)
+  let poolOracleInitialState = PoolOracleState.load(poolOracleStateId)!
+  if (poolOracleInitialState == null) {
+    log.error('LOGIC createTokenPrice no PoolOracleState for {}', [poolOracleStateId])
+    log.critical('LOGIC createTokenPrice no PoolOracleState for {}', [
+      poolOracleStateId,
+    ])
+  } else {
+	let tokenPriceId = token.concat('-').concat(poolOracleInitialState.oracle)
+	let tokenPrice = TokenPrice.load(tokenPriceId)
+	if (tokenPrice == null) {
+	  let poolTokenId = poolId.concat('-').concat(token)
+	  let poolToken = PoolToken.load(poolTokenId)
+	  if (poolToken == null) {
+	  	log.error('LOGIC createTokenPrice no PoolToken for {}', [poolTokenId])
+	  	log.critical('LOGIC createTokenPrice no PoolToken for {}', [
+		  poolTokenId,
+		])
+	  } else {
+	  let newTokenInPriceValue = tokenToDecimal(
+	    unscaledPrice,
+		poolOracleInitialState.decimals
+	  )
+	  tokenPrice = new TokenPrice(tokenPriceId)
+	  tokenPrice.price = newTokenInPriceValue
+	  tokenPrice.symbol = poolToken.symbol
+	  tokenPrice.name = poolToken.name
+	  tokenPrice.decimals = poolToken.decimals
+	  tokenPrice.poolTokenId = poolTokenId
+	  tokenPrice.save()
+	}
+	}
+  }
+}
+
 
 /************************************
  *********** POOL SHARES ************

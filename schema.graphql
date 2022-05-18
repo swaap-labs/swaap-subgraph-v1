@@ -1,6 +1,5 @@
-type Balancer @entity {
+type SwaapProtocol @entity {
     id: ID!
-    color: String!                                      # Bronze, Silver, Gold
     poolCount: Int!                                     # Number of pools
     finalizedPoolCount: Int!                            # Number of finalized pools
     crpCount: Int!                                      # Number of CRP
@@ -34,15 +33,14 @@ type Pool @entity {
     shares: [PoolShare!] @derivedFrom(field: "poolId")
     createTime: Int!                                    # Block time pool was created
     tokensCount: BigInt!                                # Number of tokens in the pool
-    holdersCount: BigInt!                               # Number of addresses holding a positive balance of BPT
+    holdersCount: BigInt!                               # Number of addresses holding a positive balance of SPT
     joinsCount: BigInt!                                 # liquidity has been added
     exitsCount: BigInt!                                 # liquidity has been removed
     swapsCount: BigInt!
-    factoryID: Balancer!
+    factoryID: SwaapProtocol!
     tx: Bytes                                           # Pool creation transaction id
     swaps: [Swap!] @derivedFrom(field: "poolAddress")
     roundFees: RoundFees
-
 }
 
 type PoolToken @entity {
@@ -83,6 +81,7 @@ type Swap @entity {
     userAddress: User                       # User address that initiates the swap
     value: BigDecimal!                      # Swap value in USD
     spread: BigDecimal!                     # Parameter modifying the final fees
+    taxBaseIn: BigDecimal!                  # TokenIn tax base
     feeValue: BigDecimal!                   # Swap fee value in USD, from feeValue, spread, poolFees
     poolTotalSwapVolume: BigDecimal!        # Total pool swap volume in USD
     poolTotalSwapFee: BigDecimal!           # Total pool swap fee in USD
@@ -105,12 +104,11 @@ type Transaction @entity {
 }
 
 type TokenPrice @entity {
-    id: ID!
+    id: ID!             # token address + oracle address
     symbol: String
     name: String
     decimals: Int!
     price: BigDecimal!
-    poolLiquidity: BigDecimal!
     poolTokenId: String
 }
 
@@ -137,4 +135,12 @@ type RoundFees @entity{
     yesterdayFees: [BigDecimal!]!
     yesterdayVolumes: [BigDecimal!]!
     last: Int!
+}
+
+type PoolOracleState @entity {
+    id: ID!                  # poolId + token address
+    oracle: String!
+    description: String!
+    fixedPointPrice: BigInt!
+    decimals: Int!
 }

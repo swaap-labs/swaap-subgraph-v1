@@ -9,7 +9,7 @@ import {
   getCrpRights,
   getCrpCap,
 } from './helpers'
-import { Balancer, Pool } from '../../generated/schema'
+import { SwaapProtocol, Pool } from '../../generated/schema'
 import { LOG_NEW_POOL } from '../../generated/Factory/Factory'
 import { ConfigurableRightsPool } from '../../generated/Factory/ConfigurableRightsPool'
 import { CrpControllerContract, PoolContract } from '../types/templates'
@@ -19,14 +19,13 @@ import {initSwaps} from "./swaps";
 
 export function handleNewPool(event: LOG_NEW_POOL): void {
 
-  let factory = Balancer.load('1')
+  let factory = SwaapProtocol.load('1')
 
   // if no factory yet, set up blank initial
   if (factory == null) {
     log.warning('FACTORY: No factory saved yet... ', [])
 
-    factory = new Balancer('1')
-    factory.color = 'Bronze'
+    factory = new SwaapProtocol('1')
     factory.poolCount = 0
     factory.finalizedPoolCount = 0
     factory.crpCount = 0

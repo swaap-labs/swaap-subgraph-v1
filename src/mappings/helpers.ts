@@ -7,16 +7,17 @@ import {
   ethereum,
 } from '@graphprotocol/graph-ts'
 import {
-  Balancer,
+  SwaapProtocol,
   Pool,
   PoolShare,
   PoolToken,
   TokenPrice,
   Transaction,
   User,
+  PoolOracleState
 } from '../../generated/schema'
-import { BToken } from '../../generated/templates/Pool/BToken'
-import { BTokenBytes } from '../../generated/templates/Pool/BTokenBytes'
+import { Token } from '../../generated/templates/Pool/Token'
+import { TokenBytes } from '../../generated/templates/Pool/TokenBytes'
 import { CRPFactory } from '../../generated/Factory/CRPFactory'
 import { ConfigurableRightsPool } from '../../generated/Factory/ConfigurableRightsPool'
 import { log } from '@graphprotocol/graph-ts/'
@@ -24,29 +25,6 @@ import { log } from '@graphprotocol/graph-ts/'
 export let ZERO_BD = BigDecimal.fromString('0')
 
 let network = dataSource.network()
-
-// Config for mainnet
-let WETH = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2'
-let USD = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'
-let DAI = '0x6b175474e89094c44da98b954eedeac495271d0f'
-let CRP_FACTORY = '0xed52D8E202401645eDAD1c0AA21e872498ce47D0'
-let WBTC = ''
-
-if (network == 'kovan') {
-  WETH = '0xd0a1e359811322d97991e03f863a0c30c2cf029c'
-  USD = '0x2f375e94fc336cdec2dc0ccb5277fe59cbf1cae5'
-  DAI = '0x1528f3fcc26d13f7079325fb78d9442607781c8c'
-  CRP_FACTORY = '0x53265f0e014995363AE54DAd7059c018BaDbcD74'
-}
-
-// TODO: Nik we are on rinkeby - this is awful programming, just testing
-if (network == 'rinkeby' || true) {
-  WETH = '0x4848683f3cC566E3588bFd6953FaAA7176968965'.toLowerCase()
-  USD = '0x0aBABf7Cd9De9508D1B69B2dd2d374fA88d384d3'.toLowerCase()
-  DAI = '0x0aBABf7Cd9De9508D1B69B2dd2d374fA88d384d3'.toLowerCase()
-  WBTC = '0xead28cb59D01ad96c9CEEb486380FB514253f8eD'.toLowerCase()
-  CRP_FACTORY = '0xA3F9145CB0B50D907930840BB2dcfF4146df8Ab4'.toLowerCase()
-}
 
 export function hexToDecimal(hexString: string, decimals: i32): BigDecimal {
   let bytes = Bytes.fromHexString(hexString).reverse() as Bytes
@@ -91,8 +69,8 @@ export function createPoolTokenEntity(
   pool: string,
   address: string
 ): void {
-  let token = BToken.bind(Address.fromString(address))
-  let tokenBytes = BTokenBytes.bind(Address.fromString(address))
+  let token = Token.bind(Address.fromString(address))
+  let tokenBytes = TokenBytes.bind(Address.fromString(address))
   let symbol = ''
   let name = ''
   let decimals = 18
@@ -125,18 +103,11 @@ export function createPoolTokenEntity(
     decimals = decimalCall.value
   }
 
-  // On Swaap Rinkeby
-  if (address == WETH) symbol = 'WETH'
-  else if (address == DAI) symbol = 'DAI'
-  else if (address == WBTC) symbol = 'WBTC'
-  else {
-    log.error('LOGIC : helpers-112 ; cant find preset token address {}', [
-      address,
-    ])
-    log.critical('LOGIC : helpers-112 ; cant find preset token address {}', [
-      address,
-    ])
-  }
+  // COMMENT THE LINES ABOVE OUT FOR LOCAL DEV ON KOVAN
+
+  // !!! COMMENT THE LINES BELOW OUT FOR NON-LOCAL DEPLOYMENT
+
+  // !!! COMMENT THE LINES ABOVE OUT FOR NON-LOCAL DEPLOYMENT
 
   let poolToken = new PoolToken(id)
   poolToken.poolId = pool
@@ -148,6 +119,21 @@ export function createPoolTokenEntity(
   poolToken.denormWeight = ZERO_BD
 
   poolToken.save()
+}
+
+export function createPoolOracleStateEntity(
+  id: string,
+  oracleAddress: string,
+  description: string,
+  price: BigInt,
+  decimals: i32
+): void {
+  let poolOracleInitialState = new PoolOracleState(id)
+  poolOracleInitialState.oracle = oracleAddress
+  poolOracleInitialState.description = description
+  poolOracleInitialState.fixedPointPrice = price
+  poolOracleInitialState.decimals = decimals
+  poolOracleInitialState.save()
 }
 
 export function updatePoolLiquidity(id: string): void {
@@ -162,137 +148,65 @@ export function updatePoolLiquidity(id: string): void {
   }
 
   if (
-    !tokensList ||
-    pool.tokensCount.lt(BigInt.fromI32(2)) ||
-    !pool.publicSwap
+    !tokensList
   ) {
     log.warning(
-      'POOL updatePoolLiquidity : no token list, or single asset or not public',
-      []
+      'POOL updatePoolLiquidity : no token list {}',
+      [id]
     )
     return
   }
 
-  // Find pool liquidity
-
-  let hasPrice = false
-  let hasUsdPrice = false
-  let poolLiquidity = ZERO_BD
-
-  if (tokensList.includes(Address.fromString(USD))) {
-    let usdPoolTokenId = id.concat('-').concat(USD)
-    let usdPoolToken = PoolToken.load(usdPoolTokenId)
-    if (usdPoolToken == null) {
-      log.error('PRICE : cant find USD poolToken {}', [usdPoolTokenId])
-      //log.critical("USD Pool token not found", [])
-      return
-    }
-    poolLiquidity = usdPoolToken.balance
-      .div(usdPoolToken.denormWeight)
-      .times(pool.totalWeight)
-    hasPrice = true
-    hasUsdPrice = true
-  } else if (tokensList.includes(Address.fromString(WETH))) {
-    let wethTokenPrice = TokenPrice.load(WETH)
-    if (wethTokenPrice !== null) {
-      let poolTokenId = id.concat('-').concat(WETH)
-      let poolToken = PoolToken.load(poolTokenId)!
-      poolLiquidity = wethTokenPrice.price
-        .times(poolToken.balance)
-        .div(poolToken.denormWeight)
-        .times(pool.totalWeight)
-      hasPrice = true
-    } else {
-      log.error('PRICE: WETH price not found', [])
-    }
-  } else if (tokensList.includes(Address.fromString(DAI))) {
-    let daiTokenPrice = TokenPrice.load(DAI)
-    if (daiTokenPrice !== null) {
-      let poolTokenId = id.concat('-').concat(DAI)
-      let poolToken = PoolToken.load(poolTokenId)!
-      poolLiquidity = daiTokenPrice.price
-        .times(poolToken.balance)
-        .div(poolToken.denormWeight)
-        .times(pool.totalWeight)
-      hasPrice = true
-    } else {
-      log.error('PRICE: DAI price not found', [])
-    }
+  if (
+    pool.tokensCount.lt(BigInt.fromI32(2))
+  ) {
+    log.warning(
+      'POOL updatePoolLiquidity : single asset {}',
+      [id]
+    )
+    return
   }
 
-  // Create or update token price
-
-  if (hasPrice) {
-    for (let i: i32 = 0; i < tokensList.length; i++) {
-      let tokenPriceId = tokensList[i].toHexString()
-      let tokenPrice = TokenPrice.load(tokenPriceId)
-      if (tokenPrice == null) {
-        tokenPrice = new TokenPrice(tokenPriceId)
-        tokenPrice.poolTokenId = ''
-        tokenPrice.poolLiquidity = ZERO_BD
-      }
-
-      let poolTokenId = id.concat('-').concat(tokenPriceId)
-      let poolToken = PoolToken.load(poolTokenId)!
-
-      if (
-        pool.active &&
-        !pool.crp &&
-        pool.tokensCount.notEqual(BigInt.fromI32(0)) &&
-        pool.publicSwap &&
-        (tokenPrice.poolTokenId == poolTokenId ||
-          poolLiquidity.gt(tokenPrice.poolLiquidity)) &&
-        ((tokenPriceId != WETH.toString() && tokenPriceId != DAI.toString()) ||
-          (pool.tokensCount.equals(BigInt.fromI32(2)) && hasUsdPrice))
-      ) {
-        tokenPrice.price = ZERO_BD
-
-        if (poolToken.balance.gt(ZERO_BD)) {
-          tokenPrice.price = poolLiquidity
-            .div(pool.totalWeight)
-            .times(poolToken.denormWeight)
-            .div(poolToken.balance)
-        }
-
-        tokenPrice.symbol = poolToken.symbol
-        tokenPrice.name = poolToken.name
-        tokenPrice.decimals = poolToken.decimals
-        tokenPrice.poolLiquidity = poolLiquidity
-        tokenPrice.poolTokenId = poolTokenId
-        tokenPrice.save()
-      }
-    }
-  } else {
-    log.error('PRICE: Pool tokens have no price {}', [pool.id])
+  if (
+    !pool.publicSwap
+  ) {
+    log.warning(
+      'POOL updatePoolLiquidity : not public {}',
+      [id]
+    )
+    return
   }
 
   // Update pool liquidity
 
   let liquidity = ZERO_BD
-  let denormWeight = ZERO_BD
 
   for (let i: i32 = 0; i < tokensList.length; i++) {
-    let tokenPriceId = tokensList[i].toHexString()
+    let token = tokensList[i].toHexString()
+    let poolOracleStateId = id.concat('-').concat(token)
+    let poolOracleInitialState = PoolOracleState.load(poolOracleStateId)
+    if (poolOracleInitialState == null) {
+      log.error('LOGIC updatePoolLiquidity: null PoolOracleState with id {}', [
+        poolOracleStateId,
+      ])
+    } else {
+    let tokenPriceId = token.concat('-').concat(poolOracleInitialState.oracle)
     let tokenPrice = TokenPrice.load(tokenPriceId)
     if (tokenPrice !== null) {
-      let poolTokenId = id.concat('-').concat(tokenPriceId)
+      let poolTokenId = id.concat('-').concat(token)
       let poolToken = PoolToken.load(poolTokenId)!
       if (
-        tokenPrice.price.gt(ZERO_BD) &&
-        poolToken.denormWeight.gt(denormWeight)
+        tokenPrice.price.gt(ZERO_BD)
       ) {
-        denormWeight = poolToken.denormWeight
-        liquidity = tokenPrice.price
-          .times(poolToken.balance)
-          .div(poolToken.denormWeight)
-          .times(pool.totalWeight)
+        liquidity = liquidity.plus(tokenPrice.price.times(poolToken.balance))
       }
     } else {
       log.info('PRICE: no token price set yet for token {}', [tokenPriceId])
     }
+    }
   }
 
-  let factory = Balancer.load('1')!
+  let factory = SwaapProtocol.load('1')!
   factory.totalLiquidity = factory.totalLiquidity
     .minus(pool.liquidity)
     .plus(liquidity)
@@ -308,7 +222,7 @@ export function decrPoolCount(
   crp: boolean
 ): void {
   if (active) {
-    let factory = Balancer.load('1')!
+    let factory = SwaapProtocol.load('1')!
     factory.poolCount = factory.poolCount - 1
     if (finalized) factory.finalizedPoolCount = factory.finalizedPoolCount - 1
     if (crp) factory.crpCount = factory.crpCount - 1
@@ -342,7 +256,7 @@ export function saveTransaction(
   transaction.save()
 
   createUserEntity(userAddress)
-  
+
    */
 }
 
@@ -354,10 +268,11 @@ export function createUserEntity(address: string): void {
 }
 
 export function isCrp(address: Address): boolean {
-  let crpFactory = CRPFactory.bind(Address.fromString(CRP_FACTORY))
-  let isCrp = crpFactory.try_isCrp(address)
-  if (isCrp.reverted) return false
-  return isCrp.value
+  return false
+//   let crpFactory = CRPFactory.bind(Address.fromString(CRP_FACTORY))
+//   let isCrp = crpFactory.try_isCrp(address)
+//   if (isCrp.reverted) return false
+//   return isCrp.value
 }
 
 // TODO NZ: There must be edge case where the return value is null
@@ -403,16 +318,4 @@ export function getCrpRights(crp: ConfigurableRightsPool): string[] {
   if (rights.value.value4) rightsArr.push('canWhitelistLPs')
   if (rights.value.value5) rightsArr.push('canChangeCap')
   return rightsArr
-}
-
-function getSymbol(address: string): string {
-  if (address == WETH) return 'WETH'
-  if (address == USD) return 'DAI'
-  if (address == DAI) return 'DAI'
-  if (address == WBTC) return 'WBTC'
-
-  if (address.includes('-')) {
-    return 'Composed'
-  }
-  return 'Unknown'
 }
