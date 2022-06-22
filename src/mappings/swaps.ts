@@ -4,11 +4,11 @@ import { Pool, RoundFees, Swap } from '../../generated/schema'
 import { Timestamp } from '../types/business'
 import { LOG_SWAP } from '../../generated/templates/Pool/Pool'
 
-//log.warning('NIK SWAP starting', [])
 
-// Add pool.roundFees
+// Daily activity will be recalculated once every cache minute
 const cache: i32 = 10 * MINUTE
 
+/* Called at the creation of a new pool, starting with empty arrays */
 export function initSwaps(pool: Pool, event: ethereum.Event): void {
   const now = getNow(event)
 
@@ -16,6 +16,13 @@ export function initSwaps(pool: Pool, event: ethereum.Event): void {
   roundFees.poolAddress = pool.id
   roundFees.dailyFees = BigDecimal.zero()
   roundFees.dailyVolume = BigDecimal.zero()
+
+  /**
+   * We are creating an array of {timestamp, fee, volume} representing each swap
+   * But for reason of entity process, it is split into separated arrays
+   * for RoundFees entity, we can't easily store related entity to the entity: we would
+   * need to load an entity for each swap, instead of loading a full array
+   */
   roundFees.yesterdayTimestamps = []
   roundFees.yesterdayFees = []
   roundFees.yesterdayVolumes = []
@@ -28,6 +35,13 @@ export function initSwaps(pool: Pool, event: ethereum.Event): void {
   pool.save()
 }
 
+/**
+ * Called after each swap, at the end of handleSwap function.
+ * The goal is to aggregate pool daily fees with the right prices
+ * @param pool
+ * @param swap
+ * @param event
+ */
 export function addSwap(pool: Pool, swap: Swap, event: LOG_SWAP): void {
   const now = swap.timestamp
   const limit = now - DAY
@@ -49,6 +63,7 @@ export function addSwap(pool: Pool, swap: Swap, event: LOG_SWAP): void {
     roundFees.dailyVolume = calculus[0]
     roundFees.dailyFees = calculus[1]
     roundFees.last = now
+    roundFees.swapCount = BigInt.fromString(calculus[2].toString()).toI32()
 
     roundFees.save()
   }
@@ -65,6 +80,8 @@ function add(swap: Swap, roundFees: RoundFees, limit: Timestamp): void {
   if (todayTimestamps.length > 0) {
     const firstTimestamp = todayTimestamps[0]
 
+    // first swap of the day, moving "todays" value as "yesterday", starting with a clean "today"
+    // Next swaps will be compared to this new First swap
     if (firstTimestamp < limit) {
       const t: i64 = BigInt.fromString(
         (swap.timestamp * 1000).toString()
@@ -78,12 +95,9 @@ function add(swap: Swap, roundFees: RoundFees, limit: Timestamp): void {
       todayFees = []
       yesterdayVolumes = todayVolumes
       todayVolumes = []
-
-      roundFees.dailyVolume = BigDecimal.zero() // will be updated
-      roundFees.dailyFees = BigDecimal.zero() // will be updated
-      roundFees.swapCount = 0
     }
   }
+  // Always pushing the swap in Today arrays
   todayTimestamps.push(swap.timestamp)
   todayVolumes.push(swap.value)
   todayFees.push(swap.feeValue)
@@ -99,6 +113,7 @@ function add(swap: Swap, roundFees: RoundFees, limit: Timestamp): void {
   roundFees.save()
 }
 
+// calculate apr, volume and count only once every cache time interval
 function calculate(roundFees: RoundFees, limit: Timestamp): BigDecimal[] {
   let sumFeesYesterday = BigDecimal.zero()
   let sumVolumeYesterday = BigDecimal.zero()
@@ -120,7 +135,6 @@ function calculate(roundFees: RoundFees, limit: Timestamp): BigDecimal[] {
   }
 
   // Swaps from today
-
   for (let i = 0; i < roundFees.todayTimestamps.length; i++) {
     const volume = roundFees.todayVolumes[i]
     const fee = roundFees.todayFees[i]
@@ -132,7 +146,7 @@ function calculate(roundFees: RoundFees, limit: Timestamp): BigDecimal[] {
 
   const volume = sumVolumeToday.plus(sumVolumeYesterday)
   const fees = sumFeesToday.plus(sumFeesYesterday)
-  log.debug('NIK SWAP Has calculated {} {} {}', [
+  log.debug('SWAP Has calculated {} {} {}', [
     volume.toString(),
     fees.toString(),
     swapCount.toString(),
