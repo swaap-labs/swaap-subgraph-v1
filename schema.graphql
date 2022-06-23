@@ -40,7 +40,7 @@ type Pool @entity {
     factoryID: SwaapProtocol!
     tx: Bytes                                           # Pool creation transaction id
     swaps: [Swap!] @derivedFrom(field: "poolAddress")
-    roundFees: RoundFees
+    dailyActivity: DailyActivity
 }
 
 type PoolToken @entity {
@@ -122,7 +122,7 @@ enum SwapType {
 }
 
 
-type RoundFees @entity{
+type DailyActivity @entity{
     id: ID!
     poolAddress: Pool!
     dailyFees: BigDecimal!

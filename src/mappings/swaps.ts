@@ -1,6 +1,6 @@
 import { ethereum, log, BigDecimal, BigInt } from '@graphprotocol/graph-ts'
 import { DAY, generateId, getNow, MINUTE } from './constants'
-import { Pool, RoundFees, Swap } from '../../generated/schema'
+import { Pool, DailyActivity, Swap } from '../../generated/schema'
 import { Timestamp } from '../types/business'
 import { LOG_SWAP } from '../../generated/templates/Pool/Pool'
 
@@ -12,26 +12,26 @@ const cache: i32 = 10 * MINUTE
 export function initSwaps(pool: Pool, event: ethereum.Event): void {
   const now = getNow(event)
 
-  const roundFees = new RoundFees(generateId(event))
-  roundFees.poolAddress = pool.id
-  roundFees.dailyFees = BigDecimal.zero()
-  roundFees.dailyVolume = BigDecimal.zero()
+  const dailyActivity = new DailyActivity(generateId(event))
+  dailyActivity.poolAddress = pool.id
+  dailyActivity.dailyFees = BigDecimal.zero()
+  dailyActivity.dailyVolume = BigDecimal.zero()
 
   /**
    * We are creating an array of {timestamp, fee, volume} representing each swap
    * But for reason of entity process, it is split into separated arrays
-   * for RoundFees entity, we can't easily store related entity to the entity: we would
+   * for DailyActivity entity, we can't easily store related entity to the entity: we would
    * need to load an entity for each swap, instead of loading a full array
    */
-  roundFees.yesterdayTimestamps = []
-  roundFees.yesterdayFees = []
-  roundFees.yesterdayVolumes = []
-  roundFees.todayTimestamps = []
-  roundFees.todayFees = []
-  roundFees.todayVolumes = []
-  roundFees.last = now - cache
-  roundFees.save()
-  pool.roundFees = roundFees.id
+  dailyActivity.yesterdayTimestamps = []
+  dailyActivity.yesterdayFees = []
+  dailyActivity.yesterdayVolumes = []
+  dailyActivity.todayTimestamps = []
+  dailyActivity.todayFees = []
+  dailyActivity.todayVolumes = []
+  dailyActivity.last = now - cache
+  dailyActivity.save()
+  pool.dailyActivity = dailyActivity.id
   pool.save()
 }
 
@@ -45,37 +45,37 @@ export function initSwaps(pool: Pool, event: ethereum.Event): void {
 export function addSwap(pool: Pool, swap: Swap, event: LOG_SWAP): void {
   const now = swap.timestamp
   const limit = now - DAY
-  if (!pool.roundFees) {
-    log.error('ADD SWAP : No association of roundfees for pool {}', [pool.id])
-    log.critical('ADD SWAP No roundfees association', [])
+  if (!pool.dailyActivity) {
+    log.error('ADD SWAP : No association of dailyActivity for pool {}', [pool.id])
+    log.critical('ADD SWAP No dailyActivity association', [])
   }
-  const roundFees = RoundFees.load(pool.roundFees!)!
-  if (roundFees === null) {
-    log.error('ADD SWAP : unable to load roundfees {}', [pool.roundFees!])
-    log.critical('ADD SWAP : No roundfees saved with id {}', [pool.roundFees!])
+  const dailyActivity = DailyActivity.load(pool.dailyActivity!)!
+  if (dailyActivity === null) {
+    log.error('ADD SWAP : unable to load dailyActivity {}', [pool.dailyActivity!])
+    log.critical('ADD SWAP : No dailyActivity saved with id {}', [pool.dailyActivity!])
   }
 
-  add(swap, roundFees, limit)
+  add(swap, dailyActivity, limit)
 
-  if (now > roundFees.last + cache) {
-    const calculus = calculate(roundFees, limit)
+  if (now > dailyActivity.last + cache) {
+    const calculus = calculate(dailyActivity, limit)
 
-    roundFees.dailyVolume = calculus[0]
-    roundFees.dailyFees = calculus[1]
-    roundFees.last = now
-    roundFees.swapCount = BigInt.fromString(calculus[2].toString()).toI32()
+    dailyActivity.dailyVolume = calculus[0]
+    dailyActivity.dailyFees = calculus[1]
+    dailyActivity.last = now
+    dailyActivity.swapCount = BigInt.fromString(calculus[2].toString()).toI32()
 
-    roundFees.save()
+    dailyActivity.save()
   }
 }
 
-function add(swap: Swap, roundFees: RoundFees, limit: Timestamp): void {
-  let yesterdayTimestamps = roundFees.yesterdayTimestamps
-  let yesterdayFees = roundFees.yesterdayFees
-  let yesterdayVolumes = roundFees.yesterdayVolumes
-  let todayTimestamps = roundFees.todayTimestamps
-  let todayFees = roundFees.todayFees
-  let todayVolumes = roundFees.todayVolumes
+function add(swap: Swap, dailyActivity: DailyActivity, limit: Timestamp): void {
+  let yesterdayTimestamps = dailyActivity.yesterdayTimestamps
+  let yesterdayFees = dailyActivity.yesterdayFees
+  let yesterdayVolumes = dailyActivity.yesterdayVolumes
+  let todayTimestamps = dailyActivity.todayTimestamps
+  let todayFees = dailyActivity.todayFees
+  let todayVolumes = dailyActivity.todayVolumes
 
   if (todayTimestamps.length > 0) {
     const firstTimestamp = todayTimestamps[0]
@@ -102,19 +102,19 @@ function add(swap: Swap, roundFees: RoundFees, limit: Timestamp): void {
   todayVolumes.push(swap.value)
   todayFees.push(swap.feeValue)
 
-  roundFees.yesterdayTimestamps = yesterdayTimestamps
-  roundFees.yesterdayVolumes = yesterdayVolumes
-  roundFees.yesterdayFees = yesterdayFees
-  roundFees.todayTimestamps = todayTimestamps
-  roundFees.todayVolumes = todayVolumes
-  roundFees.todayFees = todayFees
-  roundFees.swapCount = roundFees.swapCount + 1
+  dailyActivity.yesterdayTimestamps = yesterdayTimestamps
+  dailyActivity.yesterdayVolumes = yesterdayVolumes
+  dailyActivity.yesterdayFees = yesterdayFees
+  dailyActivity.todayTimestamps = todayTimestamps
+  dailyActivity.todayVolumes = todayVolumes
+  dailyActivity.todayFees = todayFees
+  dailyActivity.swapCount = dailyActivity.swapCount + 1
 
-  roundFees.save()
+  dailyActivity.save()
 }
 
 // calculate apr, volume and count only once every cache time interval
-function calculate(roundFees: RoundFees, limit: Timestamp): BigDecimal[] {
+function calculate(dailyActivity: DailyActivity, limit: Timestamp): BigDecimal[] {
   let sumFeesYesterday = BigDecimal.zero()
   let sumVolumeYesterday = BigDecimal.zero()
   let sumFeesToday = BigDecimal.zero()
@@ -122,10 +122,10 @@ function calculate(roundFees: RoundFees, limit: Timestamp): BigDecimal[] {
   let swapCount = 0
 
   // Swaps from yesterday not older than 24h
-  for (let i = 0; i < roundFees.yesterdayTimestamps.length; i++) {
-    const timestamp = roundFees.yesterdayTimestamps[i]
-    const volume = roundFees.yesterdayVolumes[i]
-    const fee = roundFees.yesterdayFees[i]
+  for (let i = 0; i < dailyActivity.yesterdayTimestamps.length; i++) {
+    const timestamp = dailyActivity.yesterdayTimestamps[i]
+    const volume = dailyActivity.yesterdayVolumes[i]
+    const fee = dailyActivity.yesterdayFees[i]
 
     if (timestamp > limit) {
       sumVolumeYesterday = sumVolumeYesterday.plus(volume)
@@ -135,9 +135,9 @@ function calculate(roundFees: RoundFees, limit: Timestamp): BigDecimal[] {
   }
 
   // Swaps from today
-  for (let i = 0; i < roundFees.todayTimestamps.length; i++) {
-    const volume = roundFees.todayVolumes[i]
-    const fee = roundFees.todayFees[i]
+  for (let i = 0; i < dailyActivity.todayTimestamps.length; i++) {
+    const volume = dailyActivity.todayVolumes[i]
+    const fee = dailyActivity.todayFees[i]
 
     sumVolumeToday = sumVolumeToday.plus(volume)
     sumFeesToday = sumFeesToday.plus(fee)

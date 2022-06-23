@@ -72,7 +72,7 @@ export function handleNewPool(event: LOG_NEW_POOL): void {
   pool.save()
   log.info('FACTORY: new pool saved', [])
 
-  // Link to roundFees
+  // Link to dailyActivity
   initSwaps(pool, event)
 
   factory.poolCount = factory.poolCount + 1
