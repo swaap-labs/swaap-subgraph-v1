@@ -149,7 +149,7 @@ export function handleNewOracleState(event: LOG_NEW_ORACLE_STATE): void {
     log.info('PoolOracleInitialState is null, creating it {}', [poolOracleStateId])
     createPoolOracleStateEntity(poolOracleStateId, oracleAddress, description, price, decimals)
   } else {
-  	poolOracleInitialState.oracle = oracleAddress // should be the same value
+  	poolOracleInitialState.proxy = oracleAddress // should be the same value
   	poolOracleInitialState.description = description
   	poolOracleInitialState.fixedPointPrice = price
   	poolOracleInitialState.decimals = decimals
@@ -209,6 +209,8 @@ export function handleRebind(event: LOG_CALL): void {
 
   poolToken.balance = balance
   poolToken.denormWeight = denormWeight
+
+  poolToken.oracleInitialState = poolTokenId
 
   poolToken.save()
 
@@ -476,7 +478,7 @@ function updateTokenPrice(poolId: string, token: string, unscaledPrice: BigDecim
     ])
     return null
   }
-  let tokenPriceId = token.concat('-').concat(poolOracleInitialState.oracle)
+  let tokenPriceId = token.concat('-').concat(poolOracleInitialState.proxy)
   let tokenPrice = TokenPrice.load(tokenPriceId)
   if (tokenPrice == null) {
     log.error('LOGIC updateTokenPrice no TokenPrice for {}', [tokenPriceId])
@@ -503,7 +505,7 @@ function createTokenPrice(poolId: string, token: string, unscaledPrice: BigDecim
       poolOracleStateId,
     ])
   } else {
-	let tokenPriceId = token.concat('-').concat(poolOracleInitialState.oracle)
+	let tokenPriceId = token.concat('-').concat(poolOracleInitialState.proxy)
 	let tokenPrice = TokenPrice.load(tokenPriceId)
 	if (tokenPrice == null) {
 	  let poolTokenId = poolId.concat('-').concat(token)

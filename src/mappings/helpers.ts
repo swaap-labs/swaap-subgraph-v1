@@ -129,7 +129,7 @@ export function createPoolOracleStateEntity(
   decimals: i32
 ): void {
   let poolOracleInitialState = new PoolOracleState(id)
-  poolOracleInitialState.oracle = oracleAddress
+  poolOracleInitialState.proxy = oracleAddress
   poolOracleInitialState.description = description
   poolOracleInitialState.fixedPointPrice = price
   poolOracleInitialState.decimals = decimals
@@ -190,7 +190,7 @@ export function updatePoolLiquidity(id: string): void {
         poolOracleStateId,
       ])
     } else {
-    let tokenPriceId = token.concat('-').concat(poolOracleInitialState.oracle)
+    let tokenPriceId = token.concat('-').concat(poolOracleInitialState.proxy)
     let tokenPrice = TokenPrice.load(tokenPriceId)
     if (tokenPrice !== null) {
       let poolTokenId = id.concat('-').concat(token)

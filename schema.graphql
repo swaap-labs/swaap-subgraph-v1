@@ -44,7 +44,7 @@ type Pool @entity {
 }
 
 type PoolToken @entity {
-    id: ID!                                             # poolId + token address
+    id: ID!                              # poolId + token address
     poolId: Pool!
     symbol: String
     name: String
@@ -52,6 +52,7 @@ type PoolToken @entity {
     address: String!
     balance: BigDecimal!
     denormWeight: BigDecimal!
+    oracleInitialState: PoolOracleState!
 }
 
 type PoolShare @entity {
@@ -139,8 +140,9 @@ type DailyActivity @entity{
 
 type PoolOracleState @entity {
     id: ID!                  # poolId + token address
-    oracle: String!
+    proxy: String!
     description: String!
     fixedPointPrice: BigInt!
     decimals: Int!
+    poolToken: PoolToken!    @derivedFrom(field: "oracleInitialState")
 }
