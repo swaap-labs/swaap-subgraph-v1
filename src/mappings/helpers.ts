@@ -28,7 +28,8 @@ export let ZERO_BD = BigDecimal.fromString('0')
 import {
   EVENT_MSG_DATA_HEX_OFFSET,
   EVENT_MSG_DATA_HEX_ARG_LENGTH,
-  EVENT_MSG_DATA_HEX_ADDRESS_OFFSET
+  EVENT_MSG_DATA_HEX_ADDRESS_OFFSET,
+  PROTOCOL_DECIMALS
 } from './constants'
 
 let network = dataSource.network()
@@ -89,7 +90,7 @@ export function createPoolTokenEntity(
   let tokenBytes = TokenBytes.bind(Address.fromString(address))
   let symbol = ''
   let name = ''
-  let decimals = 18
+  let decimals = PROTOCOL_DECIMALS
 
   // COMMENT THE LINES BELOW OUT FOR LOCAL DEV ON KOVAN
 

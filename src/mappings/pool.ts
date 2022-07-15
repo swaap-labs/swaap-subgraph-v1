@@ -50,6 +50,7 @@ import {
   OwnershipTransferred,
 } from '../../generated/Factory/ConfigurableRightsPool'
 import { addSwap } from './swaps'
+import { PROTOCOL_DECIMALS } from './constants'
 
 
 /************************************
@@ -70,7 +71,7 @@ export function handleSetSwapFee(event: LOG_CALL): void {
     )
     return
   }
-  let swapFee = hexToDecimal(parseEvent256BitsSlot(event, 0), 18)
+  let swapFee = hexToDecimal(parseEvent256BitsSlot(event, 0), PROTOCOL_DECIMALS)
   pool.swapFee = swapFee
   pool.save()
   saveTransaction(event, 'setSwapFee')
@@ -130,7 +131,7 @@ export function handleSetDynamicCoverageFeesZ(event: LOG_CALL): void {
     )
     return
   }
-  let dynamicCoverageFeesZ = hexToDecimal(parseEvent256BitsSlot(event, 0), 18)
+  let dynamicCoverageFeesZ = hexToDecimal(parseEvent256BitsSlot(event, 0), PROTOCOL_DECIMALS)
   pool.dynamicCoverageFeesZ = dynamicCoverageFeesZ
   pool.save()
   saveTransaction(event, 'setDynamicCoverageFeesZ')
@@ -150,7 +151,7 @@ export function handleSetDynamicCoverageFeesHorizon(event: LOG_CALL): void {
     )
     return
   }
-  let dynamicCoverageFeesHorizon = hexToDecimal(parseEvent256BitsSlot(event, 0), 18)
+  let dynamicCoverageFeesHorizon = hexToDecimal(parseEvent256BitsSlot(event, 0), PROTOCOL_DECIMALS)
   pool.dynamicCoverageFeesHorizon = dynamicCoverageFeesHorizon
   pool.save()
   saveTransaction(event, 'setDynamicCoverageFeesHorizon')
@@ -190,7 +191,7 @@ export function handleSetMaxPriceUnpegRatio(event: LOG_CALL): void {
     )
     return
   }
-  let maxPriceUnpegRatio = hexToDecimal(parseEvent256BitsSlot(event, 0), 18)
+  let maxPriceUnpegRatio = hexToDecimal(parseEvent256BitsSlot(event, 0), PROTOCOL_DECIMALS)
   pool.maxPriceUnpegRatio = maxPriceUnpegRatio
   pool.save()
   saveTransaction(event, 'setMaxPriceUnpegRatio')
@@ -307,7 +308,7 @@ export function handleRebind(event: LOG_CALL): void {
   )
   let denormWeight = hexToDecimal(
     parseEvent256BitsSlot(event, 2),
-    18
+    PROTOCOL_DECIMALS
   )
 
   let poolTokenId = poolId.concat('-').concat(address.toHexString())
@@ -540,7 +541,7 @@ export function handleSwap(event: LOG_SWAP): void {
 
   let pool = Pool.load(poolId)!
 
-  const spread = tokenToDecimal(event.params.spread.toBigDecimal(), 18)
+  const spread = tokenToDecimal(event.params.spread.toBigDecimal(), PROTOCOL_DECIMALS)
   const taxBaseIn = tokenToDecimal(
     event.params.taxBaseIn.toBigDecimal(),
     poolTokenIn.decimals
@@ -688,11 +689,11 @@ export function handleTransfer(event: Transfer): void {
       poolShareTo = PoolShare.load(poolShareToId)!
     }
     poolShareTo.balance = poolShareTo.balance.plus(
-      tokenToDecimal(event.params.value.toBigDecimal(), 18)
+      tokenToDecimal(event.params.value.toBigDecimal(), PROTOCOL_DECIMALS)
     )
     poolShareTo.save()
     pool.totalShares = pool.totalShares.plus(
-      tokenToDecimal(event.params.value.toBigDecimal(), 18)
+      tokenToDecimal(event.params.value.toBigDecimal(), PROTOCOL_DECIMALS)
     )
   } else if (isBurn) {
     if (poolShareFrom == null) {
@@ -700,11 +701,11 @@ export function handleTransfer(event: Transfer): void {
       poolShareFrom = PoolShare.load(poolShareFromId)!
     }
     poolShareFrom.balance = poolShareFrom.balance.minus(
-      tokenToDecimal(event.params.value.toBigDecimal(), 18)
+      tokenToDecimal(event.params.value.toBigDecimal(), PROTOCOL_DECIMALS)
     )
     poolShareFrom.save()
     pool.totalShares = pool.totalShares.minus(
-      tokenToDecimal(event.params.value.toBigDecimal(), 18)
+      tokenToDecimal(event.params.value.toBigDecimal(), PROTOCOL_DECIMALS)
     )
   } else {
     if (poolShareTo == null) {
@@ -712,7 +713,7 @@ export function handleTransfer(event: Transfer): void {
       poolShareTo = PoolShare.load(poolShareToId)!
     }
     poolShareTo.balance = poolShareTo.balance.plus(
-      tokenToDecimal(event.params.value.toBigDecimal(), 18)
+      tokenToDecimal(event.params.value.toBigDecimal(), PROTOCOL_DECIMALS)
     )
     poolShareTo.save()
 
@@ -721,7 +722,7 @@ export function handleTransfer(event: Transfer): void {
       poolShareFrom = PoolShare.load(poolShareFromId)!
     }
     poolShareFrom.balance = poolShareFrom.balance.minus(
-      tokenToDecimal(event.params.value.toBigDecimal(), 18)
+      tokenToDecimal(event.params.value.toBigDecimal(), PROTOCOL_DECIMALS)
     )
     poolShareFrom.save()
   }

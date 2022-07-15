@@ -9,6 +9,7 @@ export const INITIAL_DYNAMIC_COVERAGE_FEES_Z = BigDecimal.fromString("6")
 export const INITIAL_DYNAMIC_COVERAGE_FEES_HORIZON = BigDecimal.fromString("5")
 export const INITIAL_PRICE_STATISTICS_LOOKBACK_IN_SEC = BigInt.fromString("3600")
 export const INITIAL_MAX_PRICE_UNPEG_RATIO = BigDecimal.fromString("1.025")
+export const PROTOCOL_DECIMALS = 18
 
 export const WHITELISTED_POOLS: string[] = [
   "0x7f5f7411c2c7ec60e2db946abbe7dc354254870b"
