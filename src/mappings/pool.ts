@@ -62,11 +62,11 @@ export function handleSetSwapFee(event: LOG_CALL): void {
   let pool = Pool.load(poolId)
   if (pool == null) {
     log.error(
-      'LOGIC handleSetSwapFee Saving fees to a null Pool {} - Returning too soon',
+      'LOGIC handleSetSwapFee Saving value to a null Pool {} - Returning too soon',
       [poolId]
     )
     log.critical(
-      'LOGIC handleSetSwapFee Saving fees to a null Pool {} - Returning too soon',
+      'LOGIC handleSetSwapFee Saving value to a null Pool {} - Returning too soon',
       [poolId]
     )
     return
@@ -82,11 +82,11 @@ export function handleSetPriceStatisticsLookbackInRound(event: LOG_CALL): void {
   let pool = Pool.load(poolId)
   if (pool == null) {
     log.error(
-      'LOGIC handleSetPriceStatisticsLookbackInRound Saving fees to a null Pool {} - Returning too soon',
+      'LOGIC handleSetPriceStatisticsLookbackInRound Saving value to a null Pool {} - Returning too soon',
       [poolId]
     )
     log.critical(
-      'LOGIC handleSetPriceStatisticsLookbackInRound Saving fees to a null Pool {} - Returning too soon',
+      'LOGIC handleSetPriceStatisticsLookbackInRound Saving value to a null Pool {} - Returning too soon',
       [poolId]
     )
     return
@@ -102,11 +102,11 @@ export function handleSetPriceStatisticsLookbackStepInRound(event: LOG_CALL): vo
   let pool = Pool.load(poolId)
   if (pool == null) {
     log.error(
-      'LOGIC handleSetPriceStatisticsLookbackStepInRound Saving fees to a null Pool {} - Returning too soon',
+      'LOGIC handleSetPriceStatisticsLookbackStepInRound Saving value to a null Pool {} - Returning too soon',
       [poolId]
     )
     log.critical(
-      'LOGIC handleSetPriceStatisticsLookbackStepInRound Saving fees to a null Pool {} - Returning too soon',
+      'LOGIC handleSetPriceStatisticsLookbackStepInRound Saving value to a null Pool {} - Returning too soon',
       [poolId]
     )
     return
@@ -122,11 +122,11 @@ export function handleSetDynamicCoverageFeesZ(event: LOG_CALL): void {
   let pool = Pool.load(poolId)
   if (pool == null) {
     log.error(
-      'LOGIC handleSetDynamicCoverageFeesZ Saving fees to a null Pool {} - Returning too soon',
+      'LOGIC handleSetDynamicCoverageFeesZ Saving value to a null Pool {} - Returning too soon',
       [poolId]
     )
     log.critical(
-      'LOGIC handleSetDynamicCoverageFeesZ Saving fees to a null Pool {} - Returning too soon',
+      'LOGIC handleSetDynamicCoverageFeesZ Saving value to a null Pool {} - Returning too soon',
       [poolId]
     )
     return
@@ -142,11 +142,11 @@ export function handleSetDynamicCoverageFeesHorizon(event: LOG_CALL): void {
   let pool = Pool.load(poolId)
   if (pool == null) {
     log.error(
-      'LOGIC handleSetDynamicCoverageFeesHorizon Saving fees to a null Pool {} - Returning too soon',
+      'LOGIC handleSetDynamicCoverageFeesHorizon Saving value to a null Pool {} - Returning too soon',
       [poolId]
     )
     log.critical(
-      'LOGIC handleSetDynamicCoverageFeesHorizon Saving fees to a null Pool {} - Returning too soon',
+      'LOGIC handleSetDynamicCoverageFeesHorizon Saving value to a null Pool {} - Returning too soon',
       [poolId]
     )
     return
@@ -162,11 +162,11 @@ export function handleSetPriceStatisticsLookbackInSec(event: LOG_CALL): void {
   let pool = Pool.load(poolId)
   if (pool == null) {
     log.error(
-      'LOGIC handleSetPriceStatisticsLookbackInSec Saving fees to a null Pool {} - Returning too soon',
+      'LOGIC handleSetPriceStatisticsLookbackInSec Saving value to a null Pool {} - Returning too soon',
       [poolId]
     )
     log.critical(
-      'LOGIC handleSetPriceStatisticsLookbackInSec Saving fees to a null Pool {} - Returning too soon',
+      'LOGIC handleSetPriceStatisticsLookbackInSec Saving value to a null Pool {} - Returning too soon',
       [poolId]
     )
     return
@@ -182,11 +182,11 @@ export function handleSetMaxPriceUnpegRatio(event: LOG_CALL): void {
   let pool = Pool.load(poolId)
   if (pool == null) {
     log.error(
-      'LOGIC handleSetMaxPriceUnpegRatio Saving fees to a null Pool {} - Returning too soon',
+      'LOGIC handleSetMaxPriceUnpegRatio Saving value to a null Pool {} - Returning too soon',
       [poolId]
     )
     log.critical(
-      'LOGIC handleSetMaxPriceUnpegRatio Saving fees to a null Pool {} - Returning too soon',
+      'LOGIC handleSetMaxPriceUnpegRatio Saving value to a null Pool {} - Returning too soon',
       [poolId]
     )
     return
