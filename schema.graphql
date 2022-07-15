@@ -41,6 +41,12 @@ type Pool @entity {
     tx: Bytes                                           # Pool creation transaction id
     swaps: [Swap!] @derivedFrom(field: "poolAddress")
     dailyActivity: DailyActivity
+    priceStatisticsLookbackInRound: Int!
+    priceStatisticsLookbackStepInRound: Int!
+    dynamicCoverageFeesZ: BigDecimal!
+    dynamicCoverageFeesHorizon: BigDecimal!
+    priceStatisticsLookbackInSec: BigInt!
+    maxPriceUnpegRatio: BigDecimal!
 }
 
 type PoolToken @entity {

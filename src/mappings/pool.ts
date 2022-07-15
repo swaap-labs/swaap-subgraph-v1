@@ -20,7 +20,9 @@ import {
 import { log } from '@graphprotocol/graph-ts/'
 
 import {
+  hexToInt,
   hexToDecimal,
+  hexToBigInt,
   bigIntToDecimal,
   tokenToDecimal,
   createPoolShareEntity,
@@ -31,6 +33,8 @@ import {
   saveTransaction,
   ZERO_BD,
   decrPoolCount,
+  parseEvent256BitsSlot,
+  parseEventAddressSlot
 } from './helpers'
 import {
   SwaapProtocol,
@@ -46,6 +50,8 @@ import {
   OwnershipTransferred,
 } from '../../generated/Factory/ConfigurableRightsPool'
 import { addSwap } from './swaps'
+
+
 /************************************
  ********** Pool Controls ***********
  ************************************/
@@ -64,11 +70,130 @@ export function handleSetSwapFee(event: LOG_CALL): void {
     )
     return
   }
-  let swapFee = hexToDecimal(event.params.data.toHexString().slice(-40), 18)
+  let swapFee = hexToDecimal(parseEvent256BitsSlot(event, 0), 18)
   pool.swapFee = swapFee
   pool.save()
-
   saveTransaction(event, 'setSwapFee')
+}
+
+export function handleSetPriceStatisticsLookbackInRound(event: LOG_CALL): void {
+  let poolId = event.address.toHex()
+  let pool = Pool.load(poolId)
+  if (pool == null) {
+    log.error(
+      'LOGIC handleSetPriceStatisticsLookbackInRound Saving fees to a null Pool {} - Returning too soon',
+      [poolId]
+    )
+    log.critical(
+      'LOGIC handleSetPriceStatisticsLookbackInRound Saving fees to a null Pool {} - Returning too soon',
+      [poolId]
+    )
+    return
+  }
+  let priceStatisticsLookbackInRound = hexToInt(parseEvent256BitsSlot(event, 0))
+  pool.priceStatisticsLookbackInRound = priceStatisticsLookbackInRound
+  pool.save()
+  saveTransaction(event, 'setPriceStatisticsLookbackInRound')
+}
+
+export function handleSetPriceStatisticsLookbackStepInRound(event: LOG_CALL): void {
+  let poolId = event.address.toHex()
+  let pool = Pool.load(poolId)
+  if (pool == null) {
+    log.error(
+      'LOGIC handleSetPriceStatisticsLookbackStepInRound Saving fees to a null Pool {} - Returning too soon',
+      [poolId]
+    )
+    log.critical(
+      'LOGIC handleSetPriceStatisticsLookbackStepInRound Saving fees to a null Pool {} - Returning too soon',
+      [poolId]
+    )
+    return
+  }
+  let priceStatisticsLookbackStepInRound = hexToInt(parseEvent256BitsSlot(event, 0))
+  pool.priceStatisticsLookbackStepInRound = priceStatisticsLookbackStepInRound
+  pool.save()
+  saveTransaction(event, 'setPriceStatisticsLookbackStepInRound')
+}
+
+export function handleSetDynamicCoverageFeesZ(event: LOG_CALL): void {
+  let poolId = event.address.toHex()
+  let pool = Pool.load(poolId)
+  if (pool == null) {
+    log.error(
+      'LOGIC handleSetDynamicCoverageFeesZ Saving fees to a null Pool {} - Returning too soon',
+      [poolId]
+    )
+    log.critical(
+      'LOGIC handleSetDynamicCoverageFeesZ Saving fees to a null Pool {} - Returning too soon',
+      [poolId]
+    )
+    return
+  }
+  let dynamicCoverageFeesZ = hexToDecimal(parseEvent256BitsSlot(event, 0), 18)
+  pool.dynamicCoverageFeesZ = dynamicCoverageFeesZ
+  pool.save()
+  saveTransaction(event, 'setDynamicCoverageFeesZ')
+}
+
+export function handleSetDynamicCoverageFeesHorizon(event: LOG_CALL): void {
+  let poolId = event.address.toHex()
+  let pool = Pool.load(poolId)
+  if (pool == null) {
+    log.error(
+      'LOGIC handleSetDynamicCoverageFeesHorizon Saving fees to a null Pool {} - Returning too soon',
+      [poolId]
+    )
+    log.critical(
+      'LOGIC handleSetDynamicCoverageFeesHorizon Saving fees to a null Pool {} - Returning too soon',
+      [poolId]
+    )
+    return
+  }
+  let dynamicCoverageFeesHorizon = hexToDecimal(parseEvent256BitsSlot(event, 0), 18)
+  pool.dynamicCoverageFeesHorizon = dynamicCoverageFeesHorizon
+  pool.save()
+  saveTransaction(event, 'setDynamicCoverageFeesHorizon')
+}
+
+export function handleSetPriceStatisticsLookbackInSec(event: LOG_CALL): void {
+  let poolId = event.address.toHex()
+  let pool = Pool.load(poolId)
+  if (pool == null) {
+    log.error(
+      'LOGIC handleSetPriceStatisticsLookbackInSec Saving fees to a null Pool {} - Returning too soon',
+      [poolId]
+    )
+    log.critical(
+      'LOGIC handleSetPriceStatisticsLookbackInSec Saving fees to a null Pool {} - Returning too soon',
+      [poolId]
+    )
+    return
+  }
+  let priceStatisticsLookbackInSec = hexToBigInt(parseEvent256BitsSlot(event, 0))
+  pool.priceStatisticsLookbackInSec = priceStatisticsLookbackInSec
+  pool.save()
+  saveTransaction(event, 'setPriceStatisticsLookbackInSec')
+}
+
+export function handleSetMaxPriceUnpegRatio(event: LOG_CALL): void {
+  let poolId = event.address.toHex()
+  let pool = Pool.load(poolId)
+  if (pool == null) {
+    log.error(
+      'LOGIC handleSetMaxPriceUnpegRatio Saving fees to a null Pool {} - Returning too soon',
+      [poolId]
+    )
+    log.critical(
+      'LOGIC handleSetMaxPriceUnpegRatio Saving fees to a null Pool {} - Returning too soon',
+      [poolId]
+    )
+    return
+  }
+  let maxPriceUnpegRatio = hexToDecimal(parseEvent256BitsSlot(event, 0), 18)
+  pool.maxPriceUnpegRatio = maxPriceUnpegRatio
+  pool.save()
+  saveTransaction(event, 'setMaxPriceUnpegRatio')
 }
 
 export function handleSetController(event: LOG_NEW_CONTROLLER): void {
@@ -166,8 +291,9 @@ export function handleNewOracleState(event: LOG_NEW_ORACLE_STATE): void {
 export function handleRebind(event: LOG_CALL): void {
   let poolId = event.address.toHex()
   let pool = Pool.load(poolId)!
+  let poolHexAddress = parseEventAddressSlot(event, 0)
   let tokenBytes = Bytes.fromHexString(
-    event.params.data.toHexString().slice(34, 74)
+    poolHexAddress
   ) as Bytes
   let tokensList = pool.tokensList || []
   if (tokensList.indexOf(tokenBytes) == -1) {
@@ -177,10 +303,10 @@ export function handleRebind(event: LOG_CALL): void {
   pool.tokensCount = BigInt.fromI32(tokensList.length)
 
   let address = Address.fromString(
-    event.params.data.toHexString().slice(34, 74)
+    poolHexAddress
   )
   let denormWeight = hexToDecimal(
-    event.params.data.toHexString().slice(138, 202),
+    parseEvent256BitsSlot(event, 2),
     18
   )
 
@@ -203,7 +329,7 @@ export function handleRebind(event: LOG_CALL): void {
   }
 
   let balance = hexToDecimal(
-    event.params.data.toHexString().slice(74, 138),
+    parseEvent256BitsSlot(event, 1),
     poolToken.decimals
   )
 
@@ -227,8 +353,9 @@ export function handleRebind(event: LOG_CALL): void {
 export function handleUnbind(event: LOG_CALL): void {
   let poolId = event.address.toHex()
   let pool = Pool.load(poolId)!
+  let poolHexAddress = parseEventAddressSlot(event, 0)
   let tokenBytes = Bytes.fromHexString(
-    event.params.data.toHexString().slice(-40)
+    poolHexAddress
   ) as Bytes
   let tokensList = pool.tokensList || []
   let index = tokensList.indexOf(tokenBytes)
@@ -236,7 +363,7 @@ export function handleUnbind(event: LOG_CALL): void {
   pool.tokensList = tokensList
   pool.tokensCount = BigInt.fromI32(tokensList.length)
 
-  let address = Address.fromString(event.params.data.toHexString().slice(-40))
+  let address = Address.fromString(poolHexAddress)
   let poolTokenId = poolId.concat('-').concat(address.toHexString())
   let poolToken = PoolToken.load(poolTokenId)!
   pool.totalWeight = pool.totalWeight.minus(poolToken.denormWeight)
@@ -249,7 +376,6 @@ export function handleUnbind(event: LOG_CALL): void {
 }
 
 export function handleGulp(call: GulpCall): void {
-  log.warning('GULP: Entering handleGulp', [])
   let poolId = call.to.toHexString()
   let pool = Pool.load(poolId)!
 

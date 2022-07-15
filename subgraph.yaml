@@ -81,6 +81,24 @@ templates:
           handler: handleSetController
         - event: LOG_NEW_ORACLE_STATE(indexed address,address,uint256,uint8,string)
           handler: handleNewOracleState
+        - event: LOG_CALL(indexed bytes4,indexed address,bytes)
+          topic0: "0x3cc3396000000000000000000000000000000000000000000000000000000000"
+          handler: handleSetPriceStatisticsLookbackInRound
+        - event: LOG_CALL(indexed bytes4,indexed address,bytes)
+          topic0: "0x045dbae000000000000000000000000000000000000000000000000000000000"
+          handler: handleSetPriceStatisticsLookbackStepInRound
+        - event: LOG_CALL(indexed bytes4,indexed address,bytes)
+          topic0: "0x3c515d9900000000000000000000000000000000000000000000000000000000"
+          handler: handleSetDynamicCoverageFeesZ
+        - event: LOG_CALL(indexed bytes4,indexed address,bytes)
+          topic0: "0x314d204f00000000000000000000000000000000000000000000000000000000"
+          handler: handleSetDynamicCoverageFeesHorizon
+        - event: LOG_CALL(indexed bytes4,indexed address,bytes)
+          topic0: "0x538e285c00000000000000000000000000000000000000000000000000000000"
+          handler: handleSetPriceStatisticsLookbackInSec
+        - event: LOG_CALL(indexed bytes4,indexed address,bytes)
+          topic0: "0xacb21b3100000000000000000000000000000000000000000000000000000000"
+          handler: handleSetMaxPriceUnpegRatio
   - kind: ethereum/contract
     name: CrpController
     network: matic

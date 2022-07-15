@@ -21,18 +21,34 @@ import { TokenBytes } from '../../generated/templates/Pool/TokenBytes'
 import { CRPFactory } from '../../generated/Factory/CRPFactory'
 import { ConfigurableRightsPool } from '../../generated/Factory/ConfigurableRightsPool'
 import { log } from '@graphprotocol/graph-ts/'
-
+import {
+  LOG_CALL,
+} from '../../generated/templates/Pool/Pool'
 export let ZERO_BD = BigDecimal.fromString('0')
+import {
+  EVENT_MSG_DATA_HEX_OFFSET,
+  EVENT_MSG_DATA_HEX_ARG_LENGTH,
+  EVENT_MSG_DATA_HEX_ADDRESS_OFFSET
+} from './constants'
 
 let network = dataSource.network()
 
-export function hexToDecimal(hexString: string, decimals: i32): BigDecimal {
+export function hexToInt(hexString: string): i32 {
   let bytes = Bytes.fromHexString(hexString).reverse() as Bytes
-  let bi = BigInt.fromUnsignedBytes(bytes)
+  log.warning("i32: {} {}", [bytes.toString(), bytes.toI32().toString()])
+  return bytes.toI32()
+}
+
+export function hexToBigInt(hexString: string): BigInt {
+  let bytes = Bytes.fromHexString(hexString).reverse() as Bytes
+  return BigInt.fromUnsignedBytes(bytes)
+}
+
+export function hexToDecimal(hexString: string, decimals: i32): BigDecimal {
   let scale = BigInt.fromI32(10)
     .pow(decimals as u8)
     .toBigDecimal()
-  return bi.divDecimal(scale)
+  return hexToBigInt(hexString).divDecimal(scale)
 }
 
 export function bigIntToDecimal(amount: BigInt, decimals: i32): BigDecimal {
@@ -214,6 +230,21 @@ export function updatePoolLiquidity(id: string): void {
 
   pool.liquidity = liquidity
   pool.save()
+}
+
+export function parseEvent256BitsSlot(event: LOG_CALL, slotIndex: i32, slotOffset: i32 = 0): string {
+  return event.params.data.toHexString().slice(
+    EVENT_MSG_DATA_HEX_OFFSET + EVENT_MSG_DATA_HEX_ARG_LENGTH * slotIndex + slotOffset,
+    EVENT_MSG_DATA_HEX_OFFSET + EVENT_MSG_DATA_HEX_ARG_LENGTH * (slotIndex + 1)
+  )
+}
+
+export function parseEventAddressSlot(event: LOG_CALL, slotIndex: i32): string {
+  return parseEvent256BitsSlot(
+    event,
+    slotIndex,
+    EVENT_MSG_DATA_HEX_ADDRESS_OFFSET,
+  )
 }
 
 export function decrPoolCount(
