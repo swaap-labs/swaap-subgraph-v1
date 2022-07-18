@@ -11,6 +11,7 @@ export const INITIAL_PRICE_STATISTICS_LOOKBACK_IN_SEC = BigInt.fromString("3600"
 export const INITIAL_MAX_PRICE_UNPEG_RATIO = BigDecimal.fromString("1.025")
 export const PROTOCOL_DECIMALS = 18
 
+// must be in lowercase
 export const WHITELISTED_POOLS: string[] = [
   "0x7f5f7411c2c7ec60e2db946abbe7dc354254870b"
 ]
