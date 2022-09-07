@@ -542,10 +542,12 @@ export function handleSwap(event: LOG_SWAP): void {
   let pool = Pool.load(poolId)!
 
   const spread = tokenToDecimal(event.params.spread.toBigDecimal(), PROTOCOL_DECIMALS)
-  const taxBaseIn = tokenToDecimal(
-    event.params.taxBaseIn.toBigDecimal(),
-    poolTokenIn.decimals
-  )
+  
+  let taxBaseIn = tokenToDecimal(event.params.taxBaseIn.toBigDecimal(), poolTokenIn.decimals)
+  // handles error in LOG_SWAP's taxBaseIn field
+  if (taxBaseIn == tokenAmountOut) {
+    taxBaseIn = tokenAmountIn
+  }
 
   let factory = SwaapProtocol.load('1')!
 
