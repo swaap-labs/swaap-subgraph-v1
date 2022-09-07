@@ -545,7 +545,8 @@ export function handleSwap(event: LOG_SWAP): void {
   
   let taxBaseIn = tokenToDecimal(event.params.taxBaseIn.toBigDecimal(), poolTokenIn.decimals)
   // handles error in LOG_SWAP's taxBaseIn field
-  if (taxBaseIn == tokenAmountOut) {
+  if (taxBaseIn > tokenAmountIn || event.params.taxBaseIn == event.params.tokenAmountOut) {
+    log.warning('[FIX] LOG_SWAP: taxBaseIn={}, tokenAmountIn={}, tokenAmountOut={}', [taxBaseIn.toString(), tokenAmountIn.toString(), tokenAmountIn.toString()])
     taxBaseIn = tokenAmountIn
   }
 
