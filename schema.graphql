@@ -47,6 +47,9 @@ type Pool @entity {
     dynamicCoverageFeesHorizon: BigDecimal!
     priceStatisticsLookbackInSec: BigInt!
     maxPriceUnpegRatio: BigDecimal!
+    initialShares: BigDecimal!
+    initialTokensBalance: [PoolTokenBalance!] @derivedFrom(field: "poolId")
+    lpTokenPrices: [LPTokenPrice!] @derivedFrom(field: "poolId")
 }
 
 type PoolToken @entity {
@@ -61,8 +64,14 @@ type PoolToken @entity {
     oracleInitialState: PoolOracleState!
 }
 
+type LPTokenPrice @entity {
+    id: ID!              # poolId-$key ('initial' or 'current')
+    poolId: Pool!        # poolId
+    price: BigDecimal!
+}
+
 type PoolShare @entity {
-    id: ID!                                             # poolId + userAddress
+    id: ID!              # poolId + userAddress
     userAddress: User!
     poolId: Pool!
     balance: BigDecimal!
@@ -151,4 +160,10 @@ type PoolOracleState @entity {
     fixedPointPrice: BigInt!
     decimals: Int!
     poolToken: PoolToken!    @derivedFrom(field: "oracleInitialState")
+}
+
+type PoolTokenBalance @entity {
+    id: ID!                  # poolId + token address
+    poolId: Pool!
+    balance: BigDecimal!
 }

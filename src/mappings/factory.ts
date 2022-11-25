@@ -91,6 +91,7 @@ export function handleNewPool(event: LOG_NEW_POOL): void {
 	pool.factoryID = factoryAddress
 	pool.tokensList = []
 	pool.tx = event.transaction.hash
+	pool.initialShares = ZERO_BD
 
 	pool.save()
 	log.info('FACTORY: new pool saved', [])
