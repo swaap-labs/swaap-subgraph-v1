@@ -11,6 +11,8 @@ import {
   Pool,
   PoolShare,
   PoolToken,
+  PoolTokenBalance,
+  LPTokenPrice,
   TokenPrice,
   Transaction,
   User,
@@ -153,6 +155,83 @@ export function createPoolOracleStateEntity(
   poolOracleInitialState.save()
 }
 
+export function updateLPTokenPrices(pool: Pool): void {
+  let initialValue = ZERO_BD
+  for (let i = 0; i < pool.tokensList.length; i++) {
+    const tokenAddress = pool.tokensList[i].toHexString()
+    const poolTokenId = pool.id.concat("-").concat(tokenAddress)
+    let poolToken = PoolTokenBalance.load(poolTokenId)
+    if (poolToken == null) {
+      log.error('LOGIC updateLPTokenPrices: null PoolToken with id {}', [
+        poolTokenId,
+      ])
+    } else {
+      let poolOracleStateId = poolToken.id
+      let poolOracleInitialState = PoolOracleState.load(poolOracleStateId)
+      if (poolOracleInitialState == null) {
+        log.error('LOGIC updateLPTokenPrices: null PoolOracleState with id {}', [
+          poolOracleStateId,
+        ])
+      } else {
+        let tokenPriceId = tokenAddress.concat('-').concat(poolOracleInitialState.proxy)
+        let tokenPrice = TokenPrice.load(tokenPriceId)
+        if (tokenPrice == null) {
+          log.error('LOGIC updateLPTokenPrices: null TokenPrice with id {}', [
+            tokenPriceId,
+          ])
+        } else {
+          initialValue = initialValue.plus(poolToken.balance.times(tokenPrice.price))
+        }
+      }
+    }
+  }
+  updateLPTokenPrice(pool.id, 'initial', initialValue, pool.initialShares)
+
+  let currentValue = ZERO_BD
+  for (let i = 0; i < pool.tokensList.length; i++) {
+    const tokenAddress = pool.tokensList[i].toHexString()
+    const poolTokenId = pool.id.concat("-").concat(tokenAddress)
+    let poolToken = PoolToken.load(poolTokenId)
+    if (poolToken == null) {
+      log.error('LOGIC updateLPTokenPrices: null PoolToken with id {}', [
+        poolTokenId,
+      ])
+    } else {
+      let poolOracleStateId = poolToken.id
+      let poolOracleInitialState = PoolOracleState.load(poolOracleStateId)
+      if (poolOracleInitialState == null) {
+        log.error('LOGIC updateLPTokenPrices: null PoolOracleState with id {}', [
+          poolOracleStateId,
+        ])
+      } else {
+        let tokenPriceId = tokenAddress.concat('-').concat(poolOracleInitialState.proxy)
+        let tokenPrice = TokenPrice.load(tokenPriceId)
+        if (tokenPrice == null) {
+          log.error('LOGIC updateLPTokenPrices: null TokenPrice with id {}', [
+            tokenPriceId,
+          ])
+        } else {
+          currentValue = currentValue.plus(poolToken.balance.times(tokenPrice.price))
+        }
+      }
+    }
+  }
+  updateLPTokenPrice(pool.id, 'current', currentValue, pool.totalShares) 
+}
+
+export function updateLPTokenPrice(poolId: string, key: string, value: BigDecimal, shares: BigDecimal): void {
+  if (shares > ZERO_BD) {
+    const lpTokenPriceId = poolId.concat('-').concat(key)
+    let lpTokenPrice = LPTokenPrice.load(lpTokenPriceId)
+    if (lpTokenPrice == null) {
+      lpTokenPrice = new LPTokenPrice(lpTokenPriceId)
+      lpTokenPrice.poolId = poolId
+    }
+    lpTokenPrice.price = value.div(shares)
+    lpTokenPrice.save()
+  }
+}
+
 export function updatePoolLiquidity(id: string): void {
   let pool = Pool.load(id)!
   let tokensList: Array<Bytes> = pool.tokensList
@@ -231,6 +310,8 @@ export function updatePoolLiquidity(id: string): void {
 
   pool.liquidity = liquidity
   pool.save()
+
+  updateLPTokenPrices(pool)
 }
 
 export function parseEvent256BitsSlot(event: LOG_CALL, slotIndex: i32, slotOffset: i32 = 0): string {

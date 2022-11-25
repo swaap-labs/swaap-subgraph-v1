@@ -41,6 +41,7 @@ import {
   Pool,
   PoolShare,
   PoolToken,
+  PoolTokenBalance,
   Swap,
   TokenPrice,
   PoolOracleState
@@ -238,8 +239,26 @@ export function handleFinalize(event: LOG_CALL): void {
   pool.finalized = true
   pool.symbol = 'SPT'
   pool.publicSwap = true
+
+  for (let i = 0; i < pool.tokensList.length; i++) {
+    const tokenAddress = pool.tokensList[i].toHexString()
+    const poolTokenId = poolId.concat("-").concat(tokenAddress)
+    const poolToken = PoolToken.load(poolTokenId)
+    if (poolToken == null) {
+      log.error('LOGIC handleFinalize: null PoolToken with id {}', [
+        poolTokenId,
+      ])
+    } else {
+      let initialTokensBalance = new PoolTokenBalance(poolTokenId)
+      initialTokensBalance.poolId = poolId
+      initialTokensBalance.balance = poolToken.balance
+      initialTokensBalance.save()
+    }
+  }
+
   // pool.totalShares = balance
   pool.save()
+
   log.info('Pool : Finalized the pool {}', [event.address.toHex()])
 
   /*
@@ -262,7 +281,6 @@ export function handleFinalize(event: LOG_CALL): void {
 // LOG_NEW_ORACLE_STATE is fired by the bindMMM and rebindMMM functions
 export function handleNewOracleState(event: LOG_NEW_ORACLE_STATE): void {
   let poolId = event.address.toHex()
-  let pool = Pool.load(poolId)!
   let tokenAddress = event.params.token.toHexString()
   let oracleAddress = event.params.oracle.toHexString()
   let price = event.params.price
@@ -686,17 +704,22 @@ export function handleTransfer(event: Transfer): void {
 
   let pool = Pool.load(poolId)!
 
+  const shares = event.params.value.toBigDecimal()
+  if (pool.initialShares == ZERO_BD && pool.finalized) {
+    pool.initialShares = tokenToDecimal(shares, PROTOCOL_DECIMALS)
+  }
+
   if (isMint) {
     if (poolShareTo == null) {
       createPoolShareEntity(poolShareToId, poolId, event.params.to.toHex())
       poolShareTo = PoolShare.load(poolShareToId)!
     }
     poolShareTo.balance = poolShareTo.balance.plus(
-      tokenToDecimal(event.params.value.toBigDecimal(), PROTOCOL_DECIMALS)
+      tokenToDecimal(shares, PROTOCOL_DECIMALS)
     )
     poolShareTo.save()
     pool.totalShares = pool.totalShares.plus(
-      tokenToDecimal(event.params.value.toBigDecimal(), PROTOCOL_DECIMALS)
+      tokenToDecimal(shares, PROTOCOL_DECIMALS)
     )
   } else if (isBurn) {
     if (poolShareFrom == null) {
@@ -704,11 +727,11 @@ export function handleTransfer(event: Transfer): void {
       poolShareFrom = PoolShare.load(poolShareFromId)!
     }
     poolShareFrom.balance = poolShareFrom.balance.minus(
-      tokenToDecimal(event.params.value.toBigDecimal(), PROTOCOL_DECIMALS)
+      tokenToDecimal(shares, PROTOCOL_DECIMALS)
     )
     poolShareFrom.save()
     pool.totalShares = pool.totalShares.minus(
-      tokenToDecimal(event.params.value.toBigDecimal(), PROTOCOL_DECIMALS)
+      tokenToDecimal(shares, PROTOCOL_DECIMALS)
     )
   } else {
     if (poolShareTo == null) {
@@ -716,7 +739,7 @@ export function handleTransfer(event: Transfer): void {
       poolShareTo = PoolShare.load(poolShareToId)!
     }
     poolShareTo.balance = poolShareTo.balance.plus(
-      tokenToDecimal(event.params.value.toBigDecimal(), PROTOCOL_DECIMALS)
+      tokenToDecimal(shares, PROTOCOL_DECIMALS)
     )
     poolShareTo.save()
 
@@ -725,7 +748,7 @@ export function handleTransfer(event: Transfer): void {
       poolShareFrom = PoolShare.load(poolShareFromId)!
     }
     poolShareFrom.balance = poolShareFrom.balance.minus(
-      tokenToDecimal(event.params.value.toBigDecimal(), PROTOCOL_DECIMALS)
+      tokenToDecimal(shares, PROTOCOL_DECIMALS)
     )
     poolShareFrom.save()
   }
