@@ -186,37 +186,7 @@ export function updateLPTokenPrices(pool: Pool): void {
     }
   }
   updateLPTokenPrice(pool.id, 'initial', initialValue, pool.initialShares)
-
-  let currentValue = ZERO_BD
-  for (let i = 0; i < pool.tokensList.length; i++) {
-    const tokenAddress = pool.tokensList[i].toHexString()
-    const poolTokenId = pool.id.concat("-").concat(tokenAddress)
-    let poolToken = PoolToken.load(poolTokenId)
-    if (poolToken == null) {
-      log.error('LOGIC updateLPTokenPrices: null PoolToken with id {}', [
-        poolTokenId,
-      ])
-    } else {
-      let poolOracleStateId = poolToken.id
-      let poolOracleInitialState = PoolOracleState.load(poolOracleStateId)
-      if (poolOracleInitialState == null) {
-        log.error('LOGIC updateLPTokenPrices: null PoolOracleState with id {}', [
-          poolOracleStateId,
-        ])
-      } else {
-        let tokenPriceId = tokenAddress.concat('-').concat(poolOracleInitialState.proxy)
-        let tokenPrice = TokenPrice.load(tokenPriceId)
-        if (tokenPrice == null) {
-          log.error('LOGIC updateLPTokenPrices: null TokenPrice with id {}', [
-            tokenPriceId,
-          ])
-        } else {
-          currentValue = currentValue.plus(poolToken.balance.times(tokenPrice.price))
-        }
-      }
-    }
-  }
-  updateLPTokenPrice(pool.id, 'current', currentValue, pool.totalShares) 
+  updateLPTokenPrice(pool.id, 'current', pool.liquidity, pool.totalShares) 
 }
 
 export function updateLPTokenPrice(poolId: string, key: string, value: BigDecimal, shares: BigDecimal): void {
