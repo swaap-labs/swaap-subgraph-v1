@@ -155,7 +155,10 @@ export function createPoolOracleStateEntity(
   poolOracleInitialState.save()
 }
 
-export function updateLPTokenPrices(pool: Pool): void {
+export function updateLPTokenPrices(poolId: string): void {
+
+  let pool = Pool.load(poolId)!
+  
   let initialValue = ZERO_BD
   for (let i = 0; i < pool.tokensList.length; i++) {
     const tokenAddress = pool.tokensList[i].toHexString()
@@ -281,7 +284,7 @@ export function updatePoolLiquidity(id: string): void {
   pool.liquidity = liquidity
   pool.save()
 
-  updateLPTokenPrices(pool)
+  updateLPTokenPrices(id)
 }
 
 export function parseEvent256BitsSlot(event: LOG_CALL, slotIndex: i32, slotOffset: i32 = 0): string {

@@ -34,7 +34,8 @@ import {
   ZERO_BD,
   decrPoolCount,
   parseEvent256BitsSlot,
-  parseEventAddressSlot
+  parseEventAddressSlot,
+  updateLPTokenPrices
 } from './helpers'
 import {
   SwaapProtocol,
@@ -770,4 +771,9 @@ export function handleTransfer(event: Transfer): void {
   }
 
   pool.save()
+
+  if (isMint || isBurn) {
+    updateLPTokenPrices(pool.id)
+  }
+  
 }
